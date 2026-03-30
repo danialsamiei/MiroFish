@@ -4,7 +4,7 @@
     <nav class="navbar">
       <div class="nav-brand">MIROFISH</div>
       <div class="nav-links">
-        <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
+        <a :href="APP_REPOSITORY_URL" target="_blank" class="github-link">
           访问我们的Github主页 <span class="arrow">↗</span>
         </a>
       </div>
@@ -210,6 +210,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
+import { APP_REPOSITORY_URL } from '../brand'
 
 const router = useRouter()
 

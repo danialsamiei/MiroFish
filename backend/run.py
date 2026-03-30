@@ -21,6 +21,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app import create_app
 from app.config import Config
 
+app = create_app()
+
 
 def main():
     """主函数"""
@@ -32,9 +34,6 @@ def main():
             print(f"  - {err}")
         print("\n请检查 .env 文件中的配置")
         sys.exit(1)
-    
-    # 创建应用
-    app = create_app()
     
     # 获取运行配置
     host = os.environ.get('FLASK_HOST', '0.0.0.0')

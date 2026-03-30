@@ -31,6 +31,7 @@ class Config:
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    ALLOW_DEGRADED_MODE = os.environ.get('ALLOW_DEGRADED_MODE', 'false').lower() == 'true'
     
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
@@ -69,7 +70,14 @@ class Config:
         errors = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY 未配置")
-        if not cls.ZEP_API_KEY:
+        if not cls.ZEP_API_KEY and not cls.ALLOW_DEGRADED_MODE:
             errors.append("ZEP_API_KEY 未配置")
         return errors
+
+    @classmethod
+    def degraded_reasons(cls):
+        reasons = []
+        if not cls.ZEP_API_KEY:
+            reasons.append("ZEP_API_KEY 未配置，图谱记忆与完整仿真能力将退化")
+        return reasons
 

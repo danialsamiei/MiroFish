@@ -20,6 +20,7 @@ def create_app(config_class=Config):
     """Flask应用工厂函数"""
     app = Flask(__name__)
     app.config.from_object(config_class)
+    degraded_reasons = config_class.degraded_reasons()
     
     # 设置JSON编码：确保中文直接显示（而不是 \uXXXX 格式）
     # Flask >= 2.3 使用 app.json.ensure_ascii，旧版本使用 JSON_AS_ASCII 配置
@@ -53,8 +54,6 @@ def create_app(config_class=Config):
     def log_request():
         logger = get_logger('mirofish.request')
         logger.debug(f"请求: {request.method} {request.path}")
-        if request.content_type and 'json' in request.content_type:
-            logger.debug(f"请求体: {request.get_json(silent=True)}")
     
     @app.after_request
     def log_response(response):
@@ -70,10 +69,18 @@ def create_app(config_class=Config):
     
     # 健康检查
     @app.route('/health')
+    @app.route('/api/health')
     def health():
-        return {'status': 'ok', 'service': 'MiroFish Backend'}
+        return {
+            'status': 'degraded' if degraded_reasons else 'ok',
+            'service': 'MiroFish Backend',
+            'degraded': bool(degraded_reasons),
+            'missing_config': degraded_reasons,
+        }
     
     if should_log_startup:
+        if degraded_reasons:
+            logger.warning(f"MiroFish Backend 以降级模式启动: {degraded_reasons}")
         logger.info("MiroFish Backend 启动完成")
     
     return app
