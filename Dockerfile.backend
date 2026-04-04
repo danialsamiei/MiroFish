@@ -13,6 +13,7 @@ COPY backend/pyproject.toml /app/backend/pyproject.toml
 COPY backend/app /app/backend/app
 COPY backend/run.py /app/backend/run.py
 COPY backend/gunicorn.conf.py /app/backend/gunicorn.conf.py
+COPY backend/dashboard /app/backend/dashboard
 
 # Install project dependencies first (includes camel-oasis which pins neo4j==5.23.0)
 # Then install graphiti-core without deps (it works fine with neo4j 5.23.0)

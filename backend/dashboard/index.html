@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QADR-Engine | موتور پیش‌بینی</title>
+<style>
+:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1e293b;--border:#334155;--primary:#3b82f6;--primary-hover:#2563eb;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--font:'Segoe UI',Tahoma,sans-serif;--radius:8px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;direction:rtl}
+a{color:var(--primary);text-decoration:none}
+
+/* Login */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;width:100%;max-width:400px;text-align:center}
+.login-card h1{font-size:1.5rem;margin-bottom:8px;color:var(--primary)}
+.login-card p{color:var(--text2);margin-bottom:24px;font-size:0.9rem}
+.login-card input{width:100%;padding:12px 16px;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:1rem;direction:ltr;text-align:right}
+.login-card input:focus{outline:none;border-color:var(--primary)}
+.login-card button{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);font-size:1rem;cursor:pointer;font-weight:600}
+.login-card button:hover{background:var(--primary-hover)}
+.login-error{color:var(--danger);font-size:0.85rem;margin-top:8px}
+
+/* Shell */
+.shell{display:none;min-height:100vh}
+.shell.active{display:flex;flex-direction:column}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:1.1rem;color:var(--primary);display:flex;align-items:center;gap:8px}
+.topbar h1 span{font-size:0.8rem;color:var(--text3);font-weight:400}
+.topbar-actions{display:flex;gap:12px;align-items:center}
+.topbar-actions button{padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:0.85rem}
+.topbar-actions button.primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.topbar-actions button:hover{opacity:0.85}
+.user-badge{color:var(--text2);font-size:0.85rem}
+
+/* Layout */
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:280px;background:var(--surface);border-left:1px solid var(--border);padding:16px;overflow-y:auto;flex-shrink:0}
+.sidebar h3{font-size:0.85rem;color:var(--text3);text-transform:uppercase;margin-bottom:12px;letter-spacing:1px}
+.content{flex:1;padding:24px;overflow-y:auto}
+
+/* Notebook list */
+.nb-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color 0.2s}
+.nb-item:hover{border-color:var(--primary)}
+.nb-item.active{border-color:var(--primary);background:rgba(59,130,246,0.1)}
+.nb-item h4{font-size:0.95rem;margin-bottom:4px}
+.nb-item .meta{font-size:0.75rem;color:var(--text3);display:flex;gap:8px}
+.nb-status{display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.7rem;font-weight:600}
+.nb-status.draft{background:rgba(100,116,139,0.2);color:var(--text3)}
+.nb-status.configured{background:rgba(59,130,246,0.2);color:var(--primary)}
+.nb-status.running{background:rgba(245,158,11,0.2);color:var(--warning)}
+.nb-status.complete{background:rgba(16,185,129,0.2);color:var(--success)}
+
+/* Dashboard cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.card h3{font-size:0.8rem;color:var(--text3);margin-bottom:8px}
+.card .value{font-size:1.8rem;font-weight:700}
+.card .value.ok{color:var(--success)}
+.card .value.warn{color:var(--warning)}
+.card .value.err{color:var(--danger)}
+
+/* Wizard */
+.wizard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px}
+.wizard h2{font-size:1.2rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.wizard textarea{width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:1rem;resize:vertical;min-height:80px;direction:rtl}
+.wizard textarea:focus{outline:none;border-color:var(--primary)}
+.wizard .actions{margin-top:12px;display:flex;gap:8px}
+
+/* Notebook detail */
+.nb-detail{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.nb-detail h2{margin-bottom:16px}
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.config-item{background:var(--surface2);padding:12px;border-radius:var(--radius)}
+.config-item label{font-size:0.75rem;color:var(--text3);display:block;margin-bottom:4px}
+.config-item .val{color:var(--text)}
+.tag{display:inline-block;padding:2px 8px;margin:2px;border-radius:12px;font-size:0.75rem;background:rgba(59,130,246,0.15);color:var(--primary)}
+
+/* Loading */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--text2);display:flex;align-items:center;gap:8px}
+
+/* System status */
+.status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.status-item{background:var(--surface2);padding:12px;border-radius:var(--radius);display:flex;align-items:center;gap:8px}
+.status-dot{width:8px;height:8px;border-radius:50%}
+.status-dot.ok{background:var(--success)}
+.status-dot.err{background:var(--danger)}
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen" class="login-wrap">
+  <div class="login-card">
+    <h1>QADR-Engine</h1>
+    <p>موتور پیش‌بینی یکپارچه ژئوپلیتیک</p>
+    <input id="loginUser" type="text" placeholder="نام کاربری" value="admin">
+    <input id="loginPass" type="password" placeholder="رمز عبور">
+    <button onclick="doLogin()">ورود</button>
+    <div id="loginError" class="login-error"></div>
+  </div>
+</div>
+
+<!-- Main Shell -->
+<div id="shell" class="shell">
+  <div class="topbar">
+    <h1>QADR-Engine <span>v1.0</span></h1>
+    <div class="topbar-actions">
+      <button class="primary" onclick="showQuickNotebook()">+ نت‌بوک جدید</button>
+      <button onclick="showDashboard()">داشبورد</button>
+      <button onclick="showStatus()">وضعیت سیستم</button>
+      <span class="user-badge" id="userBadge"></span>
+      <button onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="sidebar">
+      <h3>نت‌بوک‌های پیش‌بینی</h3>
+      <div id="nbList"></div>
+    </div>
+    <div class="content" id="mainContent">
+      <!-- Dynamic content here -->
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/engine';
+let token = localStorage.getItem('engine_token');
+let notebooks = [];
+let currentNb = null;
+
+// ─── Auth ───
+async function doLogin() {
+  const user = document.getElementById('loginUser').value;
+  const pass = document.getElementById('loginPass').value;
+  try {
+    const r = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: user, password: pass})
+    });
+    const d = await r.json();
+    if (r.ok) {
+      token = d.token;
+      localStorage.setItem('engine_token', token);
+      document.getElementById('userBadge').textContent = d.user;
+      showShell();
+    } else {
+      document.getElementById('loginError').textContent = d.error || 'Login failed';
+    }
+  } catch(e) {
+    document.getElementById('loginError').textContent = 'Connection error';
+  }
+}
+
+function doLogout() {
+  token = null;
+  localStorage.removeItem('engine_token');
+  document.getElementById('shell').classList.remove('active');
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+async function apiFetch(path, opts = {}) {
+  opts.headers = {...(opts.headers || {}), 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'};
+  const r = await fetch(`${API}${path}`, opts);
+  if (r.status === 401) { doLogout(); throw new Error('Unauthorized'); }
+  return r;
+}
+
+// ─── Shell ───
+async function showShell() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('shell').classList.add('active');
+  await loadNotebooks();
+  showDashboard();
+}
+
+async function loadNotebooks() {
+  try {
+    const r = await apiFetch('/notebooks');
+    const d = await r.json();
+    notebooks = d.notebooks || [];
+    renderNbList();
+  } catch(e) { console.error(e); }
+}
+
+function renderNbList() {
+  const el = document.getElementById('nbList');
+  if (!notebooks.length) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:0.85rem">هنوز نت‌بوکی ایجاد نشده</p>';
+    return;
+  }
+  el.innerHTML = notebooks.map(nb => `
+    <div class="nb-item ${currentNb?.id === nb.id ? 'active' : ''}" onclick="openNotebook('${nb.id}')">
+      <h4>${nb.title}</h4>
+      <div class="meta">
+        <span class="nb-status ${nb.status}">${nb.status}</span>
+        <span>${nb.topic || ''}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Dashboard ───
+function showDashboard() {
+  currentNb = null;
+  renderNbList();
+  document.getElementById('mainContent').innerHTML = `
+    <div class="cards">
+      <div class="card"><h3>نت‌بوک‌ها</h3><div class="value">${notebooks.length}</div></div>
+      <div class="card"><h3>وضعیت</h3><div class="value ok">فعال</div></div>
+      <div class="card"><h3>مدل‌ها</h3><div class="value">3</div></div>
+      <div class="card"><h3>منابع OSINT</h3><div class="value">13</div></div>
+    </div>
+    <div class="wizard" id="quickWizard">
+      <h2>ایجاد سریع نت‌بوک هوشمند</h2>
+      <textarea id="wizardTopic" placeholder="موضوع پیش‌بینی را وارد کنید... مثال: تاثیر بسته شدن تنگه هرمز بر قیمت نفت و بازارهای مالی"></textarea>
+      <div class="actions">
+        <button class="primary" onclick="quickNotebook()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:0.95rem;font-weight:600">ایجاد هوشمند</button>
+        <button onclick="showWizardAdvanced()" style="padding:10px 24px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:0.9rem">تنظیمات پیشرفته...</button>
+      </div>
+      <div id="wizardResult"></div>
+    </div>
+  `;
+}
+
+// ─── Quick Notebook ───
+async function quickNotebook() {
+  const topic = document.getElementById('wizardTopic').value.trim();
+  if (!topic) return;
+  document.getElementById('wizardResult').innerHTML = '<div class="loading-text"><div class="spinner"></div> هوش مصنوعی در حال پیکربندی...</div>';
+  try {
+    const r = await apiFetch('/wizard/quick-notebook', {
+      method: 'POST',
+      body: JSON.stringify({topic})
+    });
+    const d = await r.json();
+    if (r.ok) {
+      await loadNotebooks();
+      openNotebook(d.notebook.id);
+    } else {
+      document.getElementById('wizardResult').innerHTML = `<div style="color:var(--danger)">${d.error}</div>`;
+    }
+  } catch(e) {
+    document.getElementById('wizardResult').innerHTML = `<div style="color:var(--danger)">${e.message}</div>`;
+  }
+}
+
+function showQuickNotebook() {
+  showDashboard();
+  setTimeout(() => document.getElementById('wizardTopic')?.focus(), 100);
+}
+
+// ─── Wizard Advanced ───
+async function showWizardAdvanced() {
+  const topic = document.getElementById('wizardTopic').value.trim();
+  if (!topic) { alert('ابتدا موضوع را وارد کنید'); return; }
+  document.getElementById('wizardResult').innerHTML = '<div class="loading-text"><div class="spinner"></div> دریافت پیشنهادات هوش مصنوعی...</div>';
+  try {
+    const r = await apiFetch('/wizard/suggest', {
+      method: 'POST',
+      body: JSON.stringify({topic})
+    });
+    const d = await r.json();
+    if (r.ok && d.suggestion) {
+      const s = d.suggestion;
+      document.getElementById('wizardResult').innerHTML = `
+        <div style="margin-top:16px;background:var(--surface2);padding:16px;border-radius:var(--radius)">
+          <h3 style="margin-bottom:12px">پیشنهاد هوش مصنوعی:</h3>
+          <div class="config-grid">
+            <div class="config-item"><label>عنوان</label><div class="val">${s.title || ''}</div></div>
+            <div class="config-item"><label>بازه زمانی</label><div class="val">${s.timeframe || ''}</div></div>
+            <div class="config-item"><label>زبان‌ها</label><div class="val">${(s.languages || []).map(l => `<span class="tag">${l}</span>`).join('')}</div></div>
+            <div class="config-item"><label>بازیگران</label><div class="val">${(s.actors || []).map(a => `<span class="tag">${a}</span>`).join('')}</div></div>
+          </div>
+          ${s.hypotheses ? `<div style="margin-top:8px"><label style="font-size:0.75rem;color:var(--text3)">فرضیات</label>${s.hypotheses.map(h => `<div style="margin:4px 0;font-size:0.85rem">- ${h.statement} <span class="tag">${h.category}</span> <span class="tag">وزن: ${h.weight}</span></div>`).join('')}</div>` : ''}
+          <div style="margin-top:12px">
+            <button onclick="createFromSuggestion(${JSON.stringify(s).replace(/"/g,'&quot;')})" style="padding:10px 24px;background:var(--success);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-weight:600">تایید و ایجاد نت‌بوک</button>
+          </div>
+        </div>
+      `;
+    }
+  } catch(e) {
+    document.getElementById('wizardResult').innerHTML = `<div style="color:var(--danger)">${e.message}</div>`;
+  }
+}
+
+async function createFromSuggestion(config) {
+  try {
+    const r = await apiFetch('/notebooks', {
+      method: 'POST',
+      body: JSON.stringify({title: config.title || 'New', config})
+    });
+    const d = await r.json();
+    if (r.ok) {
+      await loadNotebooks();
+      openNotebook(d.id);
+    }
+  } catch(e) { alert(e.message); }
+}
+
+// ─── Notebook Detail ───
+async function openNotebook(nbId) {
+  try {
+    const r = await apiFetch(`/notebooks/${nbId}`);
+    currentNb = await r.json();
+    renderNbList();
+    renderNotebookDetail();
+  } catch(e) { console.error(e); }
+}
+
+function renderNotebookDetail() {
+  const nb = currentNb;
+  const cfg = nb.config || {};
+  document.getElementById('mainContent').innerHTML = `
+    <div class="nb-detail">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2>${nb.title}</h2>
+        <div style="display:flex;gap:8px">
+          <span class="nb-status ${nb.status}" style="font-size:0.85rem;padding:4px 12px">${nb.status}</span>
+          <button onclick="deleteNotebook('${nb.id}')" style="padding:6px 12px;background:var(--danger);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:0.8rem">حذف</button>
+        </div>
+      </div>
+      <div class="config-grid">
+        <div class="config-item"><label>موضوع</label><div class="val">${cfg.topic || '-'}</div></div>
+        <div class="config-item"><label>بازه زمانی</label><div class="val">${cfg.timeframe || '-'}</div></div>
+        <div class="config-item"><label>زبان‌ها</label><div class="val">${(cfg.languages || []).map(l => `<span class="tag">${l}</span>`).join('') || '-'}</div></div>
+        <div class="config-item"><label>موتورها</label><div class="val">${(cfg.engines || []).map(e => `<span class="tag">${e}</span>`).join('') || '-'}</div></div>
+        <div class="config-item"><label>بازیگران</label><div class="val">${(cfg.actors || []).map(a => `<span class="tag">${a}</span>`).join('') || '-'}</div></div>
+        <div class="config-item"><label>جستجوهای OSINT</label><div class="val">${(cfg.osint_queries || []).map(q => `<span class="tag">${q}</span>`).join('') || '-'}</div></div>
+      </div>
+      ${cfg.hypotheses?.length ? `
+        <div style="margin-top:16px">
+          <h3 style="font-size:0.9rem;margin-bottom:8px">فرضیات</h3>
+          ${cfg.hypotheses.map(h => `
+            <div style="background:var(--surface2);padding:8px 12px;border-radius:var(--radius);margin-bottom:4px;display:flex;justify-content:space-between">
+              <span>${h.statement}</span>
+              <span><span class="tag">${h.category}</span> <span class="tag">وزن: ${h.weight}</span></span>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);font-size:0.75rem;color:var(--text3)">
+        ایجاد: ${nb.created ? new Date(nb.created).toLocaleString('fa-IR') : '-'} |
+        آخرین تغییر: ${nb.updated ? new Date(nb.updated).toLocaleString('fa-IR') : '-'}
+      </div>
+    </div>
+  `;
+}
+
+async function deleteNotebook(nbId) {
+  if (!confirm('آیا از حذف این نت‌بوک مطمئنید؟')) return;
+  await apiFetch(`/notebooks/${nbId}`, {method: 'DELETE'});
+  currentNb = null;
+  await loadNotebooks();
+  showDashboard();
+}
+
+// ─── System Status ───
+async function showStatus() {
+  currentNb = null;
+  renderNbList();
+  document.getElementById('mainContent').innerHTML = '<div class="loading-text"><div class="spinner"></div> بررسی وضعیت سیستم...</div>';
+  try {
+    const r = await apiFetch('/system/status');
+    const d = await r.json();
+    const items = [
+      {name: 'Graphiti + Neo4j', status: d.graphiti?.status},
+      {name: `LLM (${d.llm?.model || '?'})`, status: d.llm?.status},
+      {name: `OSINT (${d.osint?.feeds || 0} feed)`, status: d.osint?.status},
+      {name: `Ensemble (${(d.ensemble?.models||[]).length} model)`, status: d.ensemble?.status},
+      {name: `AnalystCrew (${(d.analyst_crew?.roles||[]).length} role)`, status: d.analyst_crew?.status},
+      {name: `Notebooks`, status: 'ok'},
+    ];
+    document.getElementById('mainContent').innerHTML = `
+      <h2 style="margin-bottom:16px">وضعیت سیستم</h2>
+      <div class="status-grid">
+        ${items.map(i => `
+          <div class="status-item">
+            <div class="status-dot ${i.status === 'ok' ? 'ok' : 'err'}"></div>
+            <div>
+              <div style="font-size:0.9rem">${i.name}</div>
+              <div style="font-size:0.75rem;color:${i.status === 'ok' ? 'var(--success)' : 'var(--danger)'}">${i.status || 'unknown'}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="margin-top:16px;font-size:0.75rem;color:var(--text3)">
+        آخرین بررسی: ${d.timestamp ? new Date(d.timestamp).toLocaleString('fa-IR') : '-'}
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById('mainContent').innerHTML = `<div style="color:var(--danger)">Error: ${e.message}</div>`;
+  }
+}
+
+// ─── Init ───
+(async function init() {
+  if (token) {
+    try {
+      const r = await apiFetch('/auth/me');
+      if (r.ok) {
+        const d = await r.json();
+        document.getElementById('userBadge').textContent = d.user;
+        showShell();
+        return;
+      }
+    } catch(e) {}
+  }
+  document.getElementById('loginScreen').style.display = 'flex';
+})();
+</script>
+</body>
+</html>
