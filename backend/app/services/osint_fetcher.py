@@ -215,19 +215,45 @@ class OSINTFetcher:
                     },
                 ))
             logger.info(f"GDELT: {len(items)} articles for '{query}'")
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                logger.info("GDELT rate-limited (429), waiting 10s...")
+                time.sleep(10)
+                try:
+                    req = urllib.request.Request(url, headers={'User-Agent': UA})
+                    resp = urllib.request.urlopen(req, timeout=self.timeout)
+                    data = json.loads(resp.read())
+                    for art in data.get("articles", []):
+                        items.append(OSINTItem(
+                            title=art.get("title", ""),
+                            content=art.get("seendate", "") + " " + art.get("title", ""),
+                            url=art.get("url", ""),
+                            source="gdelt",
+                            language=art.get("language", "en")[:2].lower(),
+                            published=art.get("seendate"),
+                            category=self._categorize(art.get("title", "")),
+                        ))
+                    logger.info(f"GDELT retry: {len(items)} articles")
+                except Exception as e2:
+                    logger.warning(f"GDELT retry failed: {e2}")
+            else:
+                logger.warning(f"GDELT fetch failed: {e}")
         except Exception as e:
             logger.warning(f"GDELT fetch failed: {e}")
         return items
 
     def _fetch_rss(
-        self, name: str, url: str, language: str, max_items: int
+        self, name: str, url: str, language: str, max_items: int,
+        _retry: int = 0,
     ) -> List[OSINTItem]:
-        """Fetch from an RSS/Atom feed."""
+        """Fetch from an RSS/Atom feed with retry."""
         items = []
         try:
             req = urllib.request.Request(url, headers={'User-Agent': UA})
             resp = urllib.request.urlopen(req, timeout=self.timeout)
             content = resp.read()
+            if not content:
+                raise ValueError("Empty response")
             root = ET.fromstring(content)
 
             # Handle both RSS and Atom formats
@@ -235,6 +261,7 @@ class OSINTFetcher:
             rss_items = root.findall('.//item')
             if not rss_items:
                 rss_items = root.findall('.//atom:entry', ns)
+            logger.debug(f"RSS {name}: parsed {len(rss_items)} raw items")
 
             for item_el in rss_items[:max_items]:
                 title_el = (
@@ -276,6 +303,10 @@ class OSINTFetcher:
                     ))
             logger.info(f"RSS {name} ({language}): {len(items)} items")
         except Exception as e:
+            if _retry < 1:
+                logger.debug(f"RSS {name} retry after: {e}")
+                time.sleep(2)
+                return self._fetch_rss(name, url, language, max_items, _retry + 1)
             logger.warning(f"RSS {name} failed: {e}")
         return items
 
