@@ -29,8 +29,9 @@ services:
       FLASK_DEBUG: "false"
       FLASK_HOST: 0.0.0.0
       FLASK_PORT: 5001
-      ALLOW_DEGRADED_MODE: ${ALLOW_DEGRADED_MODE:-true}
-    mem_limit: 2g
+      ALLOW_DEGRADED_MODE: ${ALLOW_DEGRADED_MODE:-false}
+      OPENAI_API_KEY: "sk-graphiti-local"
+    mem_limit: 4g
     cpus: 2.00
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5001/health', timeout=10)\" >/dev/null 2>&1 || exit 1"]

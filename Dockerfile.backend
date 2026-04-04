@@ -14,9 +14,12 @@ COPY backend/app /app/backend/app
 COPY backend/run.py /app/backend/run.py
 COPY backend/gunicorn.conf.py /app/backend/gunicorn.conf.py
 
+# Install project dependencies first (includes camel-oasis which pins neo4j==5.23.0)
+# Then install graphiti-core without deps (it works fine with neo4j 5.23.0)
 RUN pip install --no-cache-dir --upgrade pip \
   && pip install --no-cache-dir gunicorn \
-  && pip install --no-cache-dir /app/backend
+  && pip install --no-cache-dir /app/backend \
+  && pip install --no-cache-dir --no-deps 'graphiti-core>=0.28.0'
 
 WORKDIR /app/backend
 EXPOSE 5001

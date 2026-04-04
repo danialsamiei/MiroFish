@@ -1,22 +1,17 @@
 """
-Zep实体读取与过滤服务
-从Zep图谱中读取节点，筛选出符合预定义实体类型的节点
+实体读取与过滤服务
+从Graphiti图谱中读取节点，筛选出符合预定义实体类型的节点
 """
 
-import time
-from typing import Dict, Any, List, Optional, Set, Callable, TypeVar
+from typing import Dict, Any, List, Optional, Set
 from dataclasses import dataclass, field
 
-from zep_cloud.client import Zep
+from .graph_client import GraphitiClient, NodeInfo, EdgeInfo
 
 from ..config import Config
 from ..utils.logger import get_logger
-from ..utils.zep_paging import fetch_all_nodes, fetch_all_edges
 
 logger = get_logger('mirofish.zep_entity_reader')
-
-# 用于泛型返回类型
-T = TypeVar('T')
 
 
 @dataclass
@@ -70,63 +65,23 @@ class FilteredEntities:
 
 class ZepEntityReader:
     """
-    Zep实体读取与过滤服务
-    
+    实体读取与过滤服务（使用GraphitiClient）
+
     主要功能：
-    1. 从Zep图谱读取所有节点
+    1. 从Graphiti图谱读取所有节点
     2. 筛选出符合预定义实体类型的节点（Labels不只是Entity的节点）
     3. 获取每个实体的相关边和关联节点信息
     """
-    
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or Config.ZEP_API_KEY
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY 未配置")
-        
-        self.client = Zep(api_key=self.api_key)
-    
-    def _call_with_retry(
-        self, 
-        func: Callable[[], T], 
-        operation_name: str,
-        max_retries: int = 3,
-        initial_delay: float = 2.0
-    ) -> T:
-        """
-        带重试机制的Zep API调用
-        
-        Args:
-            func: 要执行的函数（无参数的lambda或callable）
-            operation_name: 操作名称，用于日志
-            max_retries: 最大重试次数（默认3次，即最多尝试3次）
-            initial_delay: 初始延迟秒数
-            
-        Returns:
-            API调用结果
-        """
-        last_exception = None
-        delay = initial_delay
-        
-        for attempt in range(max_retries):
-            try:
-                return func()
-            except Exception as e:
-                last_exception = e
-                if attempt < max_retries - 1:
-                    logger.warning(
-                        f"Zep {operation_name} 第 {attempt + 1} 次尝试失败: {str(e)[:100]}, "
-                        f"{delay:.1f}秒后重试..."
-                    )
-                    time.sleep(delay)
-                    delay *= 2  # 指数退避
-                else:
-                    logger.error(f"Zep {operation_name} 在 {max_retries} 次尝试后仍失败: {str(e)}")
-        
-        raise last_exception
+
+    def __init__(self):
+        if not Config.NEO4J_PASSWORD:
+            raise ValueError("NEO4J_PASSWORD 未配置")
+
+        self.client = GraphitiClient()
     
     def get_all_nodes(self, graph_id: str) -> List[Dict[str, Any]]:
         """
-        获取图谱的所有节点（分页获取）
+        获取图谱的所有节点
 
         Args:
             graph_id: 图谱ID
@@ -136,12 +91,12 @@ class ZepEntityReader:
         """
         logger.info(f"获取图谱 {graph_id} 的所有节点...")
 
-        nodes = fetch_all_nodes(self.client, graph_id)
+        nodes: List[NodeInfo] = self.client.get_all_nodes(graph_id)
 
         nodes_data = []
         for node in nodes:
             nodes_data.append({
-                "uuid": getattr(node, 'uuid_', None) or getattr(node, 'uuid', ''),
+                "uuid": node.uuid,
                 "name": node.name or "",
                 "labels": node.labels or [],
                 "summary": node.summary or "",
@@ -153,7 +108,7 @@ class ZepEntityReader:
 
     def get_all_edges(self, graph_id: str) -> List[Dict[str, Any]]:
         """
-        获取图谱的所有边（分页获取）
+        获取图谱的所有边
 
         Args:
             graph_id: 图谱ID
@@ -163,12 +118,12 @@ class ZepEntityReader:
         """
         logger.info(f"获取图谱 {graph_id} 的所有边...")
 
-        edges = fetch_all_edges(self.client, graph_id)
+        edges: List[EdgeInfo] = self.client.get_all_edges(graph_id)
 
         edges_data = []
         for edge in edges:
             edges_data.append({
-                "uuid": getattr(edge, 'uuid_', None) or getattr(edge, 'uuid', ''),
+                "uuid": edge.uuid,
                 "name": edge.name or "",
                 "fact": edge.fact or "",
                 "source_node_uuid": edge.source_node_uuid,
@@ -179,34 +134,31 @@ class ZepEntityReader:
         logger.info(f"共获取 {len(edges_data)} 条边")
         return edges_data
     
-    def get_node_edges(self, node_uuid: str) -> List[Dict[str, Any]]:
+    def get_node_edges(self, graph_id: str, node_uuid: str) -> List[Dict[str, Any]]:
         """
-        获取指定节点的所有相关边（带重试机制）
-        
+        获取指定节点的所有相关边
+
         Args:
+            graph_id: 图谱ID
             node_uuid: 节点UUID
-            
+
         Returns:
             边列表
         """
         try:
-            # 使用重试机制调用Zep API
-            edges = self._call_with_retry(
-                func=lambda: self.client.graph.node.get_entity_edges(node_uuid=node_uuid),
-                operation_name=f"获取节点边(node={node_uuid[:8]}...)"
-            )
-            
+            edges: List[EdgeInfo] = self.client.get_node_edges(graph_id, node_uuid)
+
             edges_data = []
             for edge in edges:
                 edges_data.append({
-                    "uuid": getattr(edge, 'uuid_', None) or getattr(edge, 'uuid', ''),
+                    "uuid": edge.uuid,
                     "name": edge.name or "",
                     "fact": edge.fact or "",
                     "source_node_uuid": edge.source_node_uuid,
                     "target_node_uuid": edge.target_node_uuid,
                     "attributes": edge.attributes or {},
                 })
-            
+
             return edges_data
         except Exception as e:
             logger.warning(f"获取节点 {node_uuid} 的边失败: {str(e)}")
@@ -331,45 +283,42 @@ class ZepEntityReader:
         )
     
     def get_entity_with_context(
-        self, 
-        graph_id: str, 
+        self,
+        graph_id: str,
         entity_uuid: str
     ) -> Optional[EntityNode]:
         """
-        获取单个实体及其完整上下文（边和关联节点，带重试机制）
-        
+        获取单个实体及其完整上下文（边和关联节点）
+
         Args:
             graph_id: 图谱ID
             entity_uuid: 实体UUID
-            
+
         Returns:
             EntityNode或None
         """
         try:
-            # 使用重试机制获取节点
-            node = self._call_with_retry(
-                func=lambda: self.client.graph.node.get(uuid_=entity_uuid),
-                operation_name=f"获取节点详情(uuid={entity_uuid[:8]}...)"
-            )
-            
+            node: Optional[NodeInfo] = self.client.get_node(entity_uuid)
+
             if not node:
                 return None
-            
+
             # 获取节点的边
-            edges = self.get_node_edges(entity_uuid)
-            
+            edges = self.get_node_edges(graph_id, entity_uuid)
+
             # 获取所有节点用于关联查找
             all_nodes = self.get_all_nodes(graph_id)
             node_map = {n["uuid"]: n for n in all_nodes}
-            
+
             # 处理相关边和节点
             related_edges = []
             related_node_uuids = set()
-            
+
             for edge in edges:
+                direction = edge.get("attributes", {}).get("direction", "unknown")
                 if edge["source_node_uuid"] == entity_uuid:
                     related_edges.append({
-                        "direction": "outgoing",
+                        "direction": direction if direction != "unknown" else "outgoing",
                         "edge_name": edge["name"],
                         "fact": edge["fact"],
                         "target_node_uuid": edge["target_node_uuid"],
@@ -377,13 +326,13 @@ class ZepEntityReader:
                     related_node_uuids.add(edge["target_node_uuid"])
                 else:
                     related_edges.append({
-                        "direction": "incoming",
+                        "direction": direction if direction != "unknown" else "incoming",
                         "edge_name": edge["name"],
                         "fact": edge["fact"],
                         "source_node_uuid": edge["source_node_uuid"],
                     })
                     related_node_uuids.add(edge["source_node_uuid"])
-            
+
             # 获取关联节点信息
             related_nodes = []
             for related_uuid in related_node_uuids:
@@ -395,9 +344,9 @@ class ZepEntityReader:
                         "labels": related_node["labels"],
                         "summary": related_node.get("summary", ""),
                     })
-            
+
             return EntityNode(
-                uuid=getattr(node, 'uuid_', None) or getattr(node, 'uuid', ''),
+                uuid=node.uuid,
                 name=node.name or "",
                 labels=node.labels or [],
                 summary=node.summary or "",
@@ -405,7 +354,7 @@ class ZepEntityReader:
                 related_edges=related_edges,
                 related_nodes=related_nodes,
             )
-            
+
         except Exception as e:
             logger.error(f"获取实体 {entity_uuid} 失败: {str(e)}")
             return None

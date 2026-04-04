@@ -16,8 +16,14 @@ dependencies = [
     # LLM 相关
     "openai>=1.0.0",
     
-    # Zep Cloud
-    "zep-cloud==3.13.0",
+    # Graphiti (self-hosted knowledge graph - replaces Zep Cloud)
+    # NOTE: graphiti-core must be installed with --no-deps separately
+    # because camel-oasis pins neo4j==5.23.0 while graphiti wants >=5.26.0
+    # Graphiti works fine with neo4j 5.23.0 (API is compatible)
+    # Runtime deps for graphiti:
+    "tenacity>=8.0.0",
+    "diskcache>=5.0.0",
+    "json-repair>=0.1.0",
     
     # OASIS 社交媒体模拟
     "camel-oasis==0.2.5",

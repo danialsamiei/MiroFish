@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from queue import Queue, Empty
 
-from zep_cloud.client import Zep
+from .graph_client import GraphitiClient
 
 from ..config import Config
 from ..utils.logger import get_logger
@@ -228,21 +228,19 @@ class ZepGraphMemoryUpdater:
     MAX_RETRIES = 3
     RETRY_DELAY = 2  # 秒
     
-    def __init__(self, graph_id: str, api_key: Optional[str] = None):
+    def __init__(self, graph_id: str):
         """
         初始化更新器
-        
+
         Args:
             graph_id: Zep图谱ID
-            api_key: Zep API Key（可选，默认从配置读取）
         """
         self.graph_id = graph_id
-        self.api_key = api_key or Config.ZEP_API_KEY
-        
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY未配置")
-        
-        self.client = Zep(api_key=self.api_key)
+
+        if not Config.NEO4J_PASSWORD:
+            raise ValueError("NEO4J_PASSWORD未配置")
+
+        self.client = GraphitiClient()
         
         # 活动队列
         self._activity_queue: Queue = Queue()
@@ -405,10 +403,10 @@ class ZepGraphMemoryUpdater:
         # 带重试的发送
         for attempt in range(self.MAX_RETRIES):
             try:
-                self.client.graph.add(
-                    graph_id=self.graph_id,
-                    type="text",
-                    data=combined_text
+                self.client.add_episode(
+                    self.graph_id,
+                    combined_text,
+                    source="simulation"
                 )
                 
                 self._total_sent += 1
