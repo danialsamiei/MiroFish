@@ -25,7 +25,34 @@ ENGINE_USERS = {
     },
 }
 
-_sessions = {}  # token -> {user, role, expires}
+# Use HMAC-signed tokens instead of server-side sessions (works across Gunicorn workers)
+_TOKEN_SECRET = Config.SECRET_KEY or "mirofish-engine-secret"
+
+
+def _make_token(username, role):
+    """Create an HMAC-signed token."""
+    expires = int(time.time()) + 86400 * 7
+    payload = f"{username}:{role}:{expires}"
+    sig = hashlib.sha256(f"{payload}:{_TOKEN_SECRET}".encode()).hexdigest()[:16]
+    return f"{payload}:{sig}"
+
+
+def _verify_token(token):
+    """Verify HMAC-signed token."""
+    try:
+        parts = token.rsplit(":", 1)
+        if len(parts) != 2:
+            return None
+        payload, sig = parts
+        expected_sig = hashlib.sha256(f"{payload}:{_TOKEN_SECRET}".encode()).hexdigest()[:16]
+        if sig != expected_sig:
+            return None
+        username, role, expires_str = payload.split(":")
+        if int(expires_str) < time.time():
+            return None
+        return {"user": username, "role": role, "expires": int(expires_str)}
+    except Exception:
+        return None
 
 
 def _check_auth():
@@ -36,13 +63,9 @@ def _check_auth():
         token = auth[7:]
     if not token:
         token = request.cookies.get("engine_token")
-    if not token or token not in _sessions:
+    if not token:
         return None
-    sess = _sessions[token]
-    if sess["expires"] < time.time():
-        _sessions.pop(token, None)
-        return None
-    return sess
+    return _verify_token(token)
 
 
 def require_auth(f):
@@ -65,12 +88,7 @@ def engine_login():
     user = ENGINE_USERS.get(username)
     if not user or user["password_hash"] != pw_hash:
         return jsonify({"error": "Invalid credentials"}), 401
-    token = uuid.uuid4().hex
-    _sessions[token] = {
-        "user": username,
-        "role": user["role"],
-        "expires": time.time() + 86400 * 7,  # 7 days
-    }
+    token = _make_token(username, user["role"])
     resp = jsonify({"token": token, "user": username, "role": user["role"]})
     resp.set_cookie("engine_token", token, max_age=86400 * 7, httponly=True, samesite="Lax")
     return resp
