@@ -265,10 +265,38 @@ sleep 30 && docker exec qadr-mirofish-backend python3 -c \
   "from app.services.graph_client import GraphitiClient; c=GraphitiClient(); print(c.health())"
 ```
 
-## Next Steps (Planned Enhancements)
+## EnsembleVoter (ensemble_voter.py) - Phase 2
 
-1. **Abliterated model**: Pull uncensored LLM for entity extraction (no content filtering for geopolitical analysis)
-2. **OSINT integration**: Connect QADR Graph API for automated news/intelligence ingestion
-3. **Scheduled predictions**: n8n workflow for periodic prediction runs
-4. **WorldMonitor-style dashboard**: Persian-first intelligence dashboard with D3/DeckGL visualizations
-5. **Redis state management**: Persistent task/simulation state (replace JSON files)
+Multi-model LLM voting for prediction accuracy. Runs analysis across 3 Claude models in parallel:
+
+| Model | Role | Avg Latency |
+|-------|------|-------------|
+| Claude Sonnet 4.6 | Deep reasoning | ~3.4s |
+| Claude Opus 4.6 | Comprehensive analysis | ~3.7s |
+| Claude Haiku 4.5 | Fast extraction | ~1.0s |
+
+**Usage:**
+```python
+from app.services.ensemble_voter import EnsembleVoter
+voter = EnsembleVoter()
+result = voter.ensemble_analyze(
+    system_prompt="Analyze geopolitical scenario...",
+    user_prompt="Iran-Israel tensions...",
+)
+print(result.consensus)     # merged analysis
+print(result.confidence)    # 0.0-1.0 agreement ratio
+print(result.divergences)   # where models disagree
+```
+
+**Key metrics:**
+- Confidence >0.7: high agreement, reliable prediction
+- Confidence 0.4-0.7: moderate, review divergences
+- Confidence <0.4: low agreement, flag for human review
+
+## Next Steps (QADR-Engine Roadmap)
+
+1. **OSINT Pipeline**: Connect GDELT + ACLED + WorldMonitor + RSS 14-lang
+2. **CrewAI Analyst Crew**: Expert team (geopolitical, economic, military, risk)
+3. **Hypothesis Engine**: User-weighted scenario injection + Monte Carlo
+4. **Prediction Loop**: Continuous 6-hourly forecast updates
+5. **Persian Dashboard**: WorldMonitor-style with D3/DeckGL/MapLibre
