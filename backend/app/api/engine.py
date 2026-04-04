@@ -1,6 +1,6 @@
 """
-QADR-Engine Dashboard API.
-Notebook management, AI wizard, and authentication for engin.gantor.ir.
+QEngin Dashboard API.
+Notebook management, AI wizard, and authentication for the QEngin surface.
 """
 
 import hashlib
@@ -16,6 +16,9 @@ from ..config import Config
 from ..utils.logger import get_logger
 
 logger = get_logger('mirofish.engine')
+
+ENGINE_BRAND = "QEngin"
+ENGINE_EXPANSION = "Enhanced Network for Generative Intelligence & Navigation"
 
 # ─── Auth ──────────────────────────────────────────────────────────────
 ENGINE_USERS = {
@@ -209,7 +212,7 @@ def wizard_suggest():
     from ..utils.llm_client import LLMClient
     llm = LLMClient()
 
-    prompt = f"""You are QADR-Engine configuration wizard. The user wants to create a prediction notebook about:
+    prompt = f"""You are the {ENGINE_BRAND} configuration wizard for {ENGINE_EXPANSION}. The user wants to create a prediction notebook about:
 
 Topic: {topic}
 
@@ -232,7 +235,7 @@ Be specific to the topic. Use the same language as the topic for title and descr
 
     try:
         result = llm.chat_json([
-            {"role": "system", "content": "You are a geopolitical intelligence configuration assistant. Output JSON only."},
+            {"role": "system", "content": f"You are the {ENGINE_BRAND} geopolitical intelligence configuration assistant for {ENGINE_EXPANSION}. Output JSON only."},
             {"role": "user", "content": prompt},
         ], max_tokens=2000)
         return jsonify({"suggestion": result})
@@ -255,7 +258,7 @@ def wizard_quick_notebook():
     llm = LLMClient()
     try:
         suggestion = llm.chat_json([
-            {"role": "system", "content": "You are a geopolitical prediction configurator. Output JSON only with keys: title, topic, languages, actors, hypotheses, osint_queries, timeframe, engines."},
+            {"role": "system", "content": f"You are the {ENGINE_BRAND} geopolitical prediction configurator for {ENGINE_EXPANSION}. Output JSON only with keys: title, topic, languages, actors, hypotheses, osint_queries, timeframe, engines."},
             {"role": "user", "content": f"Configure prediction for: {topic}"},
         ], max_tokens=1500)
     except Exception:
