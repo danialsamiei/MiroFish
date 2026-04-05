@@ -32,6 +32,10 @@ class Config:
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
     ALLOW_DEGRADED_MODE = os.environ.get('ALLOW_DEGRADED_MODE', 'false').lower() == 'true'
+    QENGIN_WIZARD_MODEL = os.environ.get('QENGIN_WIZARD_MODEL', LLM_MODEL_NAME)
+    QENGIN_WIZARD_MAX_TOKENS = int(os.environ.get('QENGIN_WIZARD_MAX_TOKENS', '900'))
+    QENGIN_WIZARD_MAX_RETRIES = int(os.environ.get('QENGIN_WIZARD_MAX_RETRIES', '2'))
+    QENGIN_WIZARD_CACHE_TTL_SECONDS = int(os.environ.get('QENGIN_WIZARD_CACHE_TTL_SECONDS', '3600'))
 
     # Neo4j configuration (Graphiti backend)
     NEO4J_URI = os.environ.get('NEO4J_URI', 'bolt://qadr-graph-neo4j:7687')

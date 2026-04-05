@@ -16,6 +16,39 @@ from .logger import get_logger
 logger = get_logger('mirofish.llm_client')
 
 
+def _extract_json_object(text: str) -> Optional[str]:
+    """Extract the first JSON object-looking substring from a model response."""
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:index + 1]
+
+    return None
+
+
 class LLMClient:
     """LLM Client with retry and Claude compatibility."""
 
@@ -127,6 +160,13 @@ class LLMClient:
                 try:
                     return json.loads(cleaned)
                 except json.JSONDecodeError:
+                    extracted = _extract_json_object(cleaned)
+                    if extracted:
+                        try:
+                            return json.loads(extracted)
+                        except json.JSONDecodeError:
+                            cleaned = extracted
+
                     # Try json-repair as last resort
                     try:
                         from json_repair import repair_json

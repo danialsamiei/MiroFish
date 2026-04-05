@@ -19,6 +19,7 @@ logger = get_logger('mirofish.engine')
 
 ENGINE_BRAND = "QEngin"
 ENGINE_EXPANSION = "Enhanced Network for Generative Intelligence & Navigation"
+_WIZARD_CACHE = {}
 
 # ─── Auth ──────────────────────────────────────────────────────────────
 ENGINE_USERS = {
@@ -134,6 +135,175 @@ def _list_notebooks():
     return nbs
 
 
+def _deepcopy_json(value):
+    return json.loads(json.dumps(value, ensure_ascii=False))
+
+
+def _wizard_cache_key(topic):
+    normalized = " ".join((topic or "").strip().lower().split())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def _wizard_cache_get(topic):
+    cache_key = _wizard_cache_key(topic)
+    cached = _WIZARD_CACHE.get(cache_key)
+    if not cached:
+        return None
+    if cached["expires_at"] <= time.time():
+        _WIZARD_CACHE.pop(cache_key, None)
+        return None
+    return _deepcopy_json(cached["value"])
+
+
+def _wizard_cache_put(topic, suggestion):
+    ttl = max(60, Config.QENGIN_WIZARD_CACHE_TTL_SECONDS)
+    _WIZARD_CACHE[_wizard_cache_key(topic)] = {
+        "expires_at": time.time() + ttl,
+        "value": _deepcopy_json(suggestion),
+    }
+    return suggestion
+
+
+def _detect_languages(topic):
+    langs = []
+    text = topic or ""
+    if any('\u0600' <= ch <= '\u06ff' for ch in text):
+        langs.append("fa")
+    if any('\u0590' <= ch <= '\u05ff' for ch in text):
+        langs.append("he")
+    if any('\u4e00' <= ch <= '\u9fff' for ch in text):
+        langs.append("zh")
+    if any('\u0400' <= ch <= '\u04ff' for ch in text):
+        langs.append("ru")
+    if not langs or all(ord(ch) < 128 for ch in text if ch.isalpha()):
+        langs.append("en")
+    if "en" not in langs:
+        langs.append("en")
+    return langs[:4]
+
+
+def _build_quick_notebook_fallback(topic):
+    topic_text = (topic or "").strip() or "Strategic outlook"
+    title = " ".join(part.capitalize() for part in topic_text.split()) or topic_text
+    default_hypotheses = [
+        {
+            "statement": f"Policy and diplomatic shifts will materially influence {topic_text}.",
+            "weight": 0.45,
+            "category": "diplomatic",
+        },
+        {
+            "statement": f"Economic and infrastructure signals will shape the near-term outlook for {topic_text}.",
+            "weight": 0.35,
+            "category": "economic",
+        },
+        {
+            "statement": f"Security and operational disruptions could change the trajectory of {topic_text}.",
+            "weight": 0.20,
+            "category": "military",
+        },
+    ]
+    return {
+        "title": title,
+        "topic": topic_text,
+        "languages": _detect_languages(topic_text),
+        "actors": [],
+        "hypotheses": default_hypotheses,
+        "osint_queries": [
+            topic_text,
+            f"{topic_text} forecast",
+            f"{topic_text} risks",
+        ],
+        "timeframe": "3 months",
+        "engines": ["mirofish", "ensemble"],
+        "risk_categories": ["diplomatic", "economic", "military"],
+    }
+
+
+def _normalize_wizard_suggestion(topic, suggestion):
+    normalized = _build_quick_notebook_fallback(topic)
+    if not isinstance(suggestion, dict):
+        return normalized
+
+    for key, fallback_value in normalized.items():
+        incoming = suggestion.get(key)
+        if incoming in (None, "", []):
+            continue
+        normalized[key] = incoming
+
+    if not isinstance(normalized.get("languages"), list) or not normalized["languages"]:
+        normalized["languages"] = _detect_languages(topic)
+    if not isinstance(normalized.get("actors"), list):
+        normalized["actors"] = []
+    if not isinstance(normalized.get("hypotheses"), list):
+        normalized["hypotheses"] = _build_quick_notebook_fallback(topic)["hypotheses"]
+    if not isinstance(normalized.get("osint_queries"), list) or not normalized["osint_queries"]:
+        normalized["osint_queries"] = _build_quick_notebook_fallback(topic)["osint_queries"]
+    if not isinstance(normalized.get("engines"), list) or not normalized["engines"]:
+        normalized["engines"] = ["mirofish", "ensemble"]
+    if not isinstance(normalized.get("risk_categories"), list) or not normalized["risk_categories"]:
+        normalized["risk_categories"] = ["diplomatic", "economic", "military"]
+
+    return normalized
+
+
+def _wizard_prompt_messages(topic):
+    compact_schema = {
+        "title": "short notebook title",
+        "topic": "refined topic",
+        "languages": ["en", "fa"],
+        "actors": ["actor 1", "actor 2"],
+        "hypotheses": [
+            {"statement": "hypothesis", "weight": 0.5, "category": "diplomatic"}
+        ],
+        "osint_queries": ["query 1", "query 2"],
+        "timeframe": "3 months",
+        "engines": ["mirofish", "ensemble"],
+        "risk_categories": ["diplomatic", "economic"],
+    }
+    return [
+        {
+            "role": "system",
+            "content": (
+                f"You are the {ENGINE_BRAND} wizard for {ENGINE_EXPANSION}. "
+                "Return compact JSON only. Keep output concise and production-ready. "
+                "Prefer 2-4 hypotheses, 3-5 OSINT queries, and 2-6 actors."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Topic: {topic}\n"
+                f"Return JSON with this shape only:\n{json.dumps(compact_schema, ensure_ascii=False)}"
+            ),
+        },
+    ]
+
+
+def _get_wizard_suggestion(topic):
+    cached = _wizard_cache_get(topic)
+    if cached:
+        return cached, True, "cache"
+
+    from ..utils.llm_client import LLMClient
+    llm = LLMClient(model=Config.QENGIN_WIZARD_MODEL)
+
+    try:
+        suggestion = llm.chat_json(
+            _wizard_prompt_messages(topic),
+            temperature=0.2,
+            max_tokens=Config.QENGIN_WIZARD_MAX_TOKENS,
+            max_retries=Config.QENGIN_WIZARD_MAX_RETRIES,
+        )
+        suggestion = _normalize_wizard_suggestion(topic, suggestion)
+        _wizard_cache_put(topic, suggestion)
+        return suggestion, False, "llm"
+    except Exception as exc:
+        logger.warning(f"QEngin wizard fallback for topic '{topic}': {exc}")
+        fallback = _build_quick_notebook_fallback(topic)
+        _wizard_cache_put(topic, fallback)
+        return fallback, False, "fallback"
+
+
 @engine_bp.route('/notebooks', methods=['GET'])
 @require_auth
 def list_notebooks():
@@ -208,40 +378,22 @@ def wizard_suggest():
     topic = data.get("topic", "")
     if not topic:
         return jsonify({"error": "topic required"}), 400
-
-    from ..utils.llm_client import LLMClient
-    llm = LLMClient()
-
-    prompt = f"""You are the {ENGINE_BRAND} configuration wizard for {ENGINE_EXPANSION}. The user wants to create a prediction notebook about:
-
-Topic: {topic}
-
-Suggest a complete configuration as JSON:
-{{
-  "title": "Professional title for this prediction notebook (in the language of the topic)",
-  "topic": "Concise topic description",
-  "languages": ["list of relevant languages for data collection, e.g. en, fa, ar, he"],
-  "actors": ["list of key actors/entities to track"],
-  "hypotheses": [
-    {{"statement": "hypothesis text", "weight": 0.5, "category": "military|economic|diplomatic|energy"}}
-  ],
-  "osint_queries": ["suggested search queries for OSINT data collection"],
-  "timeframe": "prediction timeframe (e.g. 3 months)",
-  "engines": ["mirofish", "analyst_crew", "ensemble"],
-  "risk_categories": ["relevant risk categories"]
-}}
-
-Be specific to the topic. Use the same language as the topic for title and descriptions."""
-
-    try:
-        result = llm.chat_json([
-            {"role": "system", "content": f"You are the {ENGINE_BRAND} geopolitical intelligence configuration assistant for {ENGINE_EXPANSION}. Output JSON only."},
-            {"role": "user", "content": prompt},
-        ], max_tokens=2000)
-        return jsonify({"suggestion": result})
-    except Exception as e:
-        logger.warning(f"Wizard suggest failed: {e}")
-        return jsonify({"error": str(e)}), 500
+    started_at = time.perf_counter()
+    suggestion, cached, source = _get_wizard_suggestion(topic)
+    latency_ms = round((time.perf_counter() - started_at) * 1000)
+    logger.info(
+        "QEngin wizard/suggest topic=%s source=%s cached=%s latency_ms=%s",
+        topic[:80],
+        source,
+        cached,
+        latency_ms,
+    )
+    return jsonify({
+        "suggestion": suggestion,
+        "cached": cached,
+        "source": source,
+        "latency_ms": latency_ms,
+    })
 
 
 @engine_bp.route('/wizard/quick-notebook', methods=['POST'])
@@ -252,17 +404,8 @@ def wizard_quick_notebook():
     topic = data.get("topic", "")
     if not topic:
         return jsonify({"error": "topic required"}), 400
-
-    # Step 1: Get AI suggestion
-    from ..utils.llm_client import LLMClient
-    llm = LLMClient()
-    try:
-        suggestion = llm.chat_json([
-            {"role": "system", "content": f"You are the {ENGINE_BRAND} geopolitical prediction configurator for {ENGINE_EXPANSION}. Output JSON only with keys: title, topic, languages, actors, hypotheses, osint_queries, timeframe, engines."},
-            {"role": "user", "content": f"Configure prediction for: {topic}"},
-        ], max_tokens=1500)
-    except Exception:
-        suggestion = {"title": topic, "topic": topic, "languages": ["en"], "actors": [], "hypotheses": [], "osint_queries": [topic], "timeframe": "3 months", "engines": ["mirofish"]}
+    started_at = time.perf_counter()
+    suggestion, cached, source = _get_wizard_suggestion(topic)
 
     # Step 2: Create notebook with suggestion
     nb_id = uuid.uuid4().hex[:12]
@@ -281,7 +424,22 @@ def wizard_quick_notebook():
     with open(_nb_path(nb_id), 'w') as f:
         json.dump(notebook, f, ensure_ascii=False, indent=2)
 
-    return jsonify({"notebook": notebook, "suggestion": suggestion}), 201
+    latency_ms = round((time.perf_counter() - started_at) * 1000)
+    logger.info(
+        "QEngin wizard/quick-notebook topic=%s source=%s cached=%s latency_ms=%s notebook_id=%s",
+        topic[:80],
+        source,
+        cached,
+        latency_ms,
+        nb_id,
+    )
+    return jsonify({
+        "notebook": notebook,
+        "suggestion": suggestion,
+        "cached": cached,
+        "source": source,
+        "latency_ms": latency_ms,
+    }), 201
 
 
 # ─── System Status ─────────────────────────────────────────────────────
