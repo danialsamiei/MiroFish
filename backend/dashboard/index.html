@@ -1,417 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QEngin | Enhanced Network for Generative Intelligence &amp; Navigation</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QEngin</title>
 <style>
-:root{--bg:#0a0e1a;--surface:#111827;--surface2:#1e293b;--border:#334155;--primary:#3b82f6;--primary-hover:#2563eb;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--font:'Segoe UI',Tahoma,sans-serif;--radius:8px}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;direction:rtl}
-a{color:var(--primary);text-decoration:none}
-
-/* Login */
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;width:100%;max-width:400px;text-align:center}
-.login-card h1{font-size:1.5rem;margin-bottom:8px;color:var(--primary)}
-.login-card p{color:var(--text2);margin-bottom:24px;font-size:0.9rem}
-.login-card input{width:100%;padding:12px 16px;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:1rem;direction:ltr;text-align:right}
-.login-card input:focus{outline:none;border-color:var(--primary)}
-.login-card button{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);font-size:1rem;cursor:pointer;font-weight:600}
-.login-card button:hover{background:var(--primary-hover)}
-.login-error{color:var(--danger);font-size:0.85rem;margin-top:8px}
-
-/* Shell */
-.shell{display:none;min-height:100vh}
-.shell.active{display:flex;flex-direction:column}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.topbar h1{font-size:1.1rem;color:var(--primary);display:flex;align-items:center;gap:8px}
-.topbar h1 span{font-size:0.8rem;color:var(--text3);font-weight:400}
-.topbar-actions{display:flex;gap:12px;align-items:center}
-.topbar-actions button{padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:0.85rem}
-.topbar-actions button.primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
-.topbar-actions button:hover{opacity:0.85}
-.user-badge{color:var(--text2);font-size:0.85rem}
-
-/* Layout */
-.main{display:flex;flex:1;overflow:hidden}
-.sidebar{width:280px;background:var(--surface);border-left:1px solid var(--border);padding:16px;overflow-y:auto;flex-shrink:0}
-.sidebar h3{font-size:0.85rem;color:var(--text3);text-transform:uppercase;margin-bottom:12px;letter-spacing:1px}
-.content{flex:1;padding:24px;overflow-y:auto}
-
-/* Notebook list */
-.nb-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color 0.2s}
-.nb-item:hover{border-color:var(--primary)}
-.nb-item.active{border-color:var(--primary);background:rgba(59,130,246,0.1)}
-.nb-item h4{font-size:0.95rem;margin-bottom:4px}
-.nb-item .meta{font-size:0.75rem;color:var(--text3);display:flex;gap:8px}
-.nb-status{display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.7rem;font-weight:600}
-.nb-status.draft{background:rgba(100,116,139,0.2);color:var(--text3)}
-.nb-status.configured{background:rgba(59,130,246,0.2);color:var(--primary)}
-.nb-status.running{background:rgba(245,158,11,0.2);color:var(--warning)}
-.nb-status.complete{background:rgba(16,185,129,0.2);color:var(--success)}
-
-/* Dashboard cards */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:24px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
-.card h3{font-size:0.8rem;color:var(--text3);margin-bottom:8px}
-.card .value{font-size:1.8rem;font-weight:700}
-.card .value.ok{color:var(--success)}
-.card .value.warn{color:var(--warning)}
-.card .value.err{color:var(--danger)}
-
-/* Wizard */
-.wizard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px}
-.wizard h2{font-size:1.2rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.wizard textarea{width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:1rem;resize:vertical;min-height:80px;direction:rtl}
-.wizard textarea:focus{outline:none;border-color:var(--primary)}
-.wizard .actions{margin-top:12px;display:flex;gap:8px}
-
-/* Notebook detail */
-.nb-detail{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
-.nb-detail h2{margin-bottom:16px}
-.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-.config-item{background:var(--surface2);padding:12px;border-radius:var(--radius)}
-.config-item label{font-size:0.75rem;color:var(--text3);display:block;margin-bottom:4px}
-.config-item .val{color:var(--text)}
-.tag{display:inline-block;padding:2px 8px;margin:2px;border-radius:12px;font-size:0.75rem;background:rgba(59,130,246,0.15);color:var(--primary)}
-
-/* Loading */
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{color:var(--text2);display:flex;align-items:center;gap:8px}
-
-/* System status */
-.status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.status-item{background:var(--surface2);padding:12px;border-radius:var(--radius);display:flex;align-items:center;gap:8px}
-.status-dot{width:8px;height:8px;border-radius:50%}
-.status-dot.ok{background:var(--success)}
-.status-dot.err{background:var(--danger)}
+:root{--bg:#0b1120;--p:#121a2c;--p2:#182238;--b:#263450;--pri:#4f8cff;--ok:#10b981;--warn:#f59e0b;--err:#ef4444;--t:#e5ecf6;--m:#9fb0cb;--d:#70819d}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--t);font-family:Segoe UI,Tahoma,sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}a{color:#8fb7ff;text-decoration:none}pre{white-space:pre-wrap;word-break:break-word}.hidden{display:none!important}.card,.panel,.box{background:var(--p);border:1px solid var(--b);border-radius:18px;box-shadow:0 16px 48px rgba(0,0,0,.22)}.panel,.box{padding:18px}.btn{padding:10px 14px;border-radius:12px;border:1px solid transparent;background:var(--p2);color:var(--t)}.btn.primary{background:var(--pri);border-color:var(--pri);color:#fff}.btn.warn{background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.35);color:#ffd893}.btn.err{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.35);color:#ffb4b4}.btn.ghost{background:transparent;border-color:var(--b);color:var(--m)}.btn:disabled{opacity:.55;cursor:not-allowed}.badge{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:999px;font-size:.74rem}.draft{background:rgba(100,116,139,.18);color:#c1cbda}.configured{background:rgba(79,140,255,.16);color:#93bbff}.running{background:rgba(245,158,11,.16);color:#ffd893}.complete{background:rgba(16,185,129,.16);color:#8ef0ca}.failed{background:rgba(239,68,68,.16);color:#ffb4b4}.cancelled{background:rgba(244,114,182,.16);color:#ffbad7}.login{display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}.card{width:min(430px,100%);padding:30px}.field{display:grid;gap:8px}.field label{font-size:.82rem;color:var(--d)}.field input,.field textarea{width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--b);background:var(--p2);color:var(--t)}.field textarea{min-height:100px;resize:vertical}.shell{display:none;min-height:100vh}.shell.active{display:flex;flex-direction:column}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:16px 22px;background:#0f172a;border-bottom:1px solid var(--b)}.top h1{margin:0;font-size:1.15rem}.top p{margin:4px 0 0;color:var(--d);font-size:.82rem}.actions{display:flex;gap:8px;flex-wrap:wrap}.main{display:flex;flex:1;min-height:0}.side{width:330px;overflow:auto;padding:18px;background:#0f1728;border-left:1px solid var(--b)}.content{flex:1;overflow:auto;padding:22px}.list{display:grid;gap:10px}.nb{padding:14px;border-radius:16px;border:1px solid var(--b);background:var(--p2);cursor:pointer}.nb.active{border-color:var(--pri)}.nb h4{margin:0 0 8px;font-size:.95rem}.meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--d);font-size:.75rem}.prog{margin-top:10px;height:8px;border-radius:999px;overflow:hidden;background:#0b1222;border:1px solid #1b2942}.prog>div{height:100%;background:linear-gradient(90deg,#3a79f0,#60a5fa)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.stat{padding:18px;border-radius:18px;border:1px solid var(--b);background:var(--p)}.stat h3,.box h3{margin:0 0 8px;font-size:.82rem;color:var(--d)}.stat .v{font-size:1.75rem;font-weight:700}.small{font-size:.82rem;color:var(--m);line-height:1.9}.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.kv .box{padding:14px}.split{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:14px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.tab{padding:9px 14px;border-radius:999px;border:1px solid var(--b);background:transparent;color:var(--m)}.tab.active{background:rgba(79,140,255,.16);border-color:rgba(79,140,255,.35);color:#fff}.tag{display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(79,140,255,.12);color:#8fb7ff;font-size:.74rem;margin:3px 0 0 6px}.json{background:#0d1424;border:1px solid #22314b;border-radius:14px;padding:14px;max-height:420px;overflow:auto}.empty{min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--m);line-height:2}.timeline{display:grid;gap:10px}.item{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.02);border:1px solid #22314b}.item .name{font-weight:700}.item .sub{color:var(--m);font-size:.85rem;line-height:1.8}.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.22);border-top-color:var(--pri);border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}@media (max-width:1100px){.main{flex-direction:column}.side{width:100%;border-left:none;border-top:1px solid var(--b)}.kv,.split{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-
-<!-- Login Screen -->
-<div id="loginScreen" class="login-wrap">
-  <div class="login-card">
-    <h1>QEngin</h1>
-    <p>Enhanced Network for Generative Intelligence &amp; Navigation</p>
-    <input id="loginUser" type="text" placeholder="نام کاربری" value="admin">
-    <input id="loginPass" type="password" placeholder="رمز عبور">
-    <button onclick="doLogin()">ورود</button>
-    <div id="loginError" class="login-error"></div>
-  </div>
-</div>
-
-<!-- Main Shell -->
-<div id="shell" class="shell">
-  <div class="topbar">
-    <h1>QEngin <span>v1.0</span></h1>
-    <div class="topbar-actions">
-      <button class="primary" onclick="showQuickNotebook()">+ نت‌بوک جدید</button>
-      <button onclick="showDashboard()">داشبورد</button>
-      <button onclick="showStatus()">وضعیت سیستم</button>
-      <span class="user-badge" id="userBadge"></span>
-      <button onclick="doLogout()">خروج</button>
-    </div>
-  </div>
-  <div class="main">
-    <div class="sidebar">
-      <h3>نت‌بوک‌های پیش‌بینی</h3>
-      <div id="nbList"></div>
-    </div>
-    <div class="content" id="mainContent">
-      <!-- Dynamic content here -->
-    </div>
-  </div>
-</div>
-
+<div id="login" class="login"><div class="card"><h1 style="margin:0 0 10px">QEngin</h1><p class="small" style="margin:0 0 18px">Enhanced Network for Generative Intelligence &amp; Navigation</p><div class="field"><label>نام کاربری</label><input id="u" value="admin"></div><div class="field" style="margin-top:12px"><label>رمز عبور</label><input id="p" type="password"></div><div class="actions" style="margin-top:16px"><button class="btn primary" onclick="login()">ورود</button></div><div id="loginErr" style="margin-top:12px;color:#ffb4b4;min-height:1.4em"></div></div></div>
+<div id="shell" class="shell"><div class="top"><div><h1>QEngin</h1><p>Notebook execution, diagnostics, exports, and live monitoring</p></div><div class="actions"><span id="me" class="badge configured"></span><button class="btn ghost" onclick="showHome()">داشبورد</button><button class="btn ghost" onclick="showStatus()">وضعیت سیستم</button><button class="btn primary" onclick="showHome(true)">+ نت‌بوک جدید</button><button class="btn" onclick="logout()">خروج</button></div></div><div class="main"><aside class="side"><div class="actions" style="justify-content:space-between;margin-bottom:12px"><strong class="small">نت‌بوک‌ها</strong><button class="btn ghost" onclick="loadNotebooks()">بازخوانی</button></div><div id="list" class="list"></div></aside><main id="content" class="content"></main></div></div>
+<datalist id="modelOptions"><option value="gpt-4o"><option value="gpt-4.1"><option value="gpt-4o-mini"><option value="openai/gpt-5.2"><option value="freegpt-local"></datalist>
+<datalist id="modeOptions"><option value="strategic-brief"><option value="market-impact"><option value="risk-early-warning"><option value="scenario-analysis"><option value="executive-memo"></datalist>
+<datalist id="depthOptions"><option value="standard"><option value="deep"><option value="rapid"></datalist>
 <script>
-const API = '/engine';
-let token = localStorage.getItem('engine_token');
-let notebooks = [];
-let currentNb = null;
-
-// ─── Auth ───
-async function doLogin() {
-  const user = document.getElementById('loginUser').value;
-  const pass = document.getElementById('loginPass').value;
-  try {
-    const r = await fetch(`${API}/auth/login`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({username: user, password: pass})
-    });
-    const d = await r.json();
-    if (r.ok) {
-      token = d.token;
-      localStorage.setItem('engine_token', token);
-      document.getElementById('userBadge').textContent = d.user;
-      showShell();
-    } else {
-      document.getElementById('loginError').textContent = d.error || 'Login failed';
-    }
-  } catch(e) {
-    document.getElementById('loginError').textContent = 'Connection error';
-  }
-}
-
-function doLogout() {
-  token = null;
-  localStorage.removeItem('engine_token');
-  document.getElementById('shell').classList.remove('active');
-  document.getElementById('loginScreen').style.display = 'flex';
-}
-
-async function apiFetch(path, opts = {}) {
-  opts.headers = {...(opts.headers || {}), 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'};
-  const r = await fetch(`${API}${path}`, opts);
-  if (r.status === 401) { doLogout(); throw new Error('Unauthorized'); }
-  return r;
-}
-
-// ─── Shell ───
-async function showShell() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('shell').classList.add('active');
-  await loadNotebooks();
-  showDashboard();
-}
-
-async function loadNotebooks() {
-  try {
-    const r = await apiFetch('/notebooks');
-    const d = await r.json();
-    notebooks = d.notebooks || [];
-    renderNbList();
-  } catch(e) { console.error(e); }
-}
-
-function renderNbList() {
-  const el = document.getElementById('nbList');
-  if (!notebooks.length) {
-    el.innerHTML = '<p style="color:var(--text3);font-size:0.85rem">هنوز نت‌بوکی ایجاد نشده</p>';
-    return;
-  }
-  el.innerHTML = notebooks.map(nb => `
-    <div class="nb-item ${currentNb?.id === nb.id ? 'active' : ''}" onclick="openNotebook('${nb.id}')">
-      <h4>${nb.title}</h4>
-      <div class="meta">
-        <span class="nb-status ${nb.status}">${nb.status}</span>
-        <span>${nb.topic || ''}</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ─── Dashboard ───
-function showDashboard() {
-  currentNb = null;
-  renderNbList();
-  document.getElementById('mainContent').innerHTML = `
-    <div class="cards">
-      <div class="card"><h3>نت‌بوک‌ها</h3><div class="value">${notebooks.length}</div></div>
-      <div class="card"><h3>وضعیت</h3><div class="value ok">عملیاتی</div></div>
-      <div class="card"><h3>مدل‌ها</h3><div class="value">3</div></div>
-      <div class="card"><h3>منابع OSINT</h3><div class="value">13</div></div>
-    </div>
-    <div class="wizard" id="quickWizard">
-      <h2>ایجاد سریع نت‌بوک هوشمند</h2>
-      <textarea id="wizardTopic" placeholder="موضوع پیش‌بینی را وارد کنید... مثال: تاثیر بسته شدن تنگه هرمز بر قیمت نفت و بازارهای مالی"></textarea>
-      <div class="actions">
-        <button class="primary" onclick="quickNotebook()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:0.95rem;font-weight:600">ایجاد هوشمند</button>
-        <button onclick="showWizardAdvanced()" style="padding:10px 24px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:0.9rem">تنظیمات پیشرفته...</button>
-      </div>
-      <div id="wizardResult"></div>
-    </div>
-  `;
-}
-
-// ─── Quick Notebook ───
-async function quickNotebook() {
-  const topic = document.getElementById('wizardTopic').value.trim();
-  if (!topic) return;
-  document.getElementById('wizardResult').innerHTML = '<div class="loading-text"><div class="spinner"></div> هوش مصنوعی در حال پیکربندی...</div>';
-  try {
-    const r = await apiFetch('/wizard/quick-notebook', {
-      method: 'POST',
-      body: JSON.stringify({topic})
-    });
-    const d = await r.json();
-    if (r.ok) {
-      await loadNotebooks();
-      openNotebook(d.notebook.id);
-    } else {
-      document.getElementById('wizardResult').innerHTML = `<div style="color:var(--danger)">${d.error}</div>`;
-    }
-  } catch(e) {
-    document.getElementById('wizardResult').innerHTML = `<div style="color:var(--danger)">${e.message}</div>`;
-  }
-}
-
-function showQuickNotebook() {
-  showDashboard();
-  setTimeout(() => document.getElementById('wizardTopic')?.focus(), 100);
-}
-
-// ─── Wizard Advanced ───
-async function showWizardAdvanced() {
-  const topic = document.getElementById('wizardTopic').value.trim();
-  if (!topic) { alert('ابتدا موضوع را وارد کنید'); return; }
-  document.getElementById('wizardResult').innerHTML = '<div class="loading-text"><div class="spinner"></div> دریافت پیشنهادات هوش مصنوعی...</div>';
-  try {
-    const r = await apiFetch('/wizard/suggest', {
-      method: 'POST',
-      body: JSON.stringify({topic})
-    });
-    const d = await r.json();
-    if (r.ok && d.suggestion) {
-      const s = d.suggestion;
-      document.getElementById('wizardResult').innerHTML = `
-        <div style="margin-top:16px;background:var(--surface2);padding:16px;border-radius:var(--radius)">
-          <h3 style="margin-bottom:12px">پیشنهاد هوش مصنوعی:</h3>
-          <div class="config-grid">
-            <div class="config-item"><label>عنوان</label><div class="val">${s.title || ''}</div></div>
-            <div class="config-item"><label>بازه زمانی</label><div class="val">${s.timeframe || ''}</div></div>
-            <div class="config-item"><label>زبان‌ها</label><div class="val">${(s.languages || []).map(l => `<span class="tag">${l}</span>`).join('')}</div></div>
-            <div class="config-item"><label>بازیگران</label><div class="val">${(s.actors || []).map(a => `<span class="tag">${a}</span>`).join('')}</div></div>
-          </div>
-          ${s.hypotheses ? `<div style="margin-top:8px"><label style="font-size:0.75rem;color:var(--text3)">فرضیات</label>${s.hypotheses.map(h => `<div style="margin:4px 0;font-size:0.85rem">- ${h.statement} <span class="tag">${h.category}</span> <span class="tag">وزن: ${h.weight}</span></div>`).join('')}</div>` : ''}
-          <div style="margin-top:12px">
-            <button onclick="createFromSuggestion(${JSON.stringify(s).replace(/"/g,'&quot;')})" style="padding:10px 24px;background:var(--success);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-weight:600">تایید و ایجاد نت‌بوک</button>
-          </div>
-        </div>
-      `;
-    }
-  } catch(e) {
-    document.getElementById('wizardResult').innerHTML = `<div style="color:var(--danger)">${e.message}</div>`;
-  }
-}
-
-async function createFromSuggestion(config) {
-  try {
-    const r = await apiFetch('/notebooks', {
-      method: 'POST',
-      body: JSON.stringify({title: config.title || 'New', config})
-    });
-    const d = await r.json();
-    if (r.ok) {
-      await loadNotebooks();
-      openNotebook(d.id);
-    }
-  } catch(e) { alert(e.message); }
-}
-
-// ─── Notebook Detail ───
-async function openNotebook(nbId) {
-  try {
-    const r = await apiFetch(`/notebooks/${nbId}`);
-    currentNb = await r.json();
-    renderNbList();
-    renderNotebookDetail();
-  } catch(e) { console.error(e); }
-}
-
-function renderNotebookDetail() {
-  const nb = currentNb;
-  const cfg = nb.config || {};
-  document.getElementById('mainContent').innerHTML = `
-    <div class="nb-detail">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2>${nb.title}</h2>
-        <div style="display:flex;gap:8px">
-          <span class="nb-status ${nb.status}" style="font-size:0.85rem;padding:4px 12px">${nb.status}</span>
-          <button onclick="deleteNotebook('${nb.id}')" style="padding:6px 12px;background:var(--danger);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:0.8rem">حذف</button>
-        </div>
-      </div>
-      <div class="config-grid">
-        <div class="config-item"><label>موضوع</label><div class="val">${cfg.topic || '-'}</div></div>
-        <div class="config-item"><label>بازه زمانی</label><div class="val">${cfg.timeframe || '-'}</div></div>
-        <div class="config-item"><label>زبان‌ها</label><div class="val">${(cfg.languages || []).map(l => `<span class="tag">${l}</span>`).join('') || '-'}</div></div>
-        <div class="config-item"><label>موتورها</label><div class="val">${(cfg.engines || []).map(e => `<span class="tag">${e}</span>`).join('') || '-'}</div></div>
-        <div class="config-item"><label>بازیگران</label><div class="val">${(cfg.actors || []).map(a => `<span class="tag">${a}</span>`).join('') || '-'}</div></div>
-        <div class="config-item"><label>جستجوهای OSINT</label><div class="val">${(cfg.osint_queries || []).map(q => `<span class="tag">${q}</span>`).join('') || '-'}</div></div>
-      </div>
-      ${cfg.hypotheses?.length ? `
-        <div style="margin-top:16px">
-          <h3 style="font-size:0.9rem;margin-bottom:8px">فرضیات</h3>
-          ${cfg.hypotheses.map(h => `
-            <div style="background:var(--surface2);padding:8px 12px;border-radius:var(--radius);margin-bottom:4px;display:flex;justify-content:space-between">
-              <span>${h.statement}</span>
-              <span><span class="tag">${h.category}</span> <span class="tag">وزن: ${h.weight}</span></span>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
-      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);font-size:0.75rem;color:var(--text3)">
-        ایجاد: ${nb.created ? new Date(nb.created).toLocaleString('fa-IR') : '-'} |
-        آخرین تغییر: ${nb.updated ? new Date(nb.updated).toLocaleString('fa-IR') : '-'}
-      </div>
-    </div>
-  `;
-}
-
-async function deleteNotebook(nbId) {
-  if (!confirm('آیا از حذف این نت‌بوک مطمئنید؟')) return;
-  await apiFetch(`/notebooks/${nbId}`, {method: 'DELETE'});
-  currentNb = null;
-  await loadNotebooks();
-  showDashboard();
-}
-
-// ─── System Status ───
-async function showStatus() {
-  currentNb = null;
-  renderNbList();
-  document.getElementById('mainContent').innerHTML = '<div class="loading-text"><div class="spinner"></div> بررسی وضعیت سیستم...</div>';
-  try {
-    const r = await apiFetch('/system/status');
-    const d = await r.json();
-    const items = [
-      {name: 'Graphiti + Neo4j', status: d.graphiti?.status},
-      {name: `LLM (${d.llm?.model || '?'})`, status: d.llm?.status},
-      {name: `OSINT (${d.osint?.feeds || 0} feed)`, status: d.osint?.status},
-      {name: `Ensemble (${(d.ensemble?.models||[]).length} model)`, status: d.ensemble?.status},
-      {name: `AnalystCrew (${(d.analyst_crew?.roles||[]).length} role)`, status: d.analyst_crew?.status},
-      {name: `Notebooks`, status: 'ok'},
-    ];
-    document.getElementById('mainContent').innerHTML = `
-      <h2 style="margin-bottom:16px">وضعیت سیستم</h2>
-      <div class="status-grid">
-        ${items.map(i => `
-          <div class="status-item">
-            <div class="status-dot ${i.status === 'ok' ? 'ok' : 'err'}"></div>
-            <div>
-              <div style="font-size:0.9rem">${i.name}</div>
-              <div style="font-size:0.75rem;color:${i.status === 'ok' ? 'var(--success)' : 'var(--danger)'}">${i.status || 'unknown'}</div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div style="margin-top:16px;font-size:0.75rem;color:var(--text3)">
-        آخرین بررسی: ${d.timestamp ? new Date(d.timestamp).toLocaleString('fa-IR') : '-'}
-      </div>
-    `;
-  } catch(e) {
-    document.getElementById('mainContent').innerHTML = `<div style="color:var(--danger)">Error: ${e.message}</div>`;
-  }
-}
-
-// ─── Init ───
-(async function init() {
-  if (token) {
-    try {
-      const r = await apiFetch('/auth/me');
-      if (r.ok) {
-        const d = await r.json();
-        document.getElementById('userBadge').textContent = d.user;
-        showShell();
-        return;
-      }
-    } catch(e) {}
-  }
-  document.getElementById('loginScreen').style.display = 'flex';
-})();
+const API='/engine',S={token:localStorage.getItem('engine_token'),notebooks:[],current:null,tab:'overview',poll:null,logCursor:0,suggestion:null};
+const el=id=>document.getElementById(id),esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'),arr=v=>Array.isArray(v)?v:[],fmt=v=>{if(!v)return '-';try{return new Date(v).toLocaleString('fa-IR')}catch{return v}},j=v=>JSON.stringify(v??{},null,2),labels={draft:'پیش‌نویس',configured:'آماده اجرا',running:'در حال اجرا',complete:'تکمیل‌شده',failed:'ناموفق',cancelled:'متوقف‌شده'},badge=s=>`<span class="badge ${esc(s||'draft')}">${esc(labels[s]||s||'draft')}</span>`;
+function stopPoll(){if(S.poll){clearInterval(S.poll);S.poll=null}}async function api(path,opts={}){const h={...(opts.headers||{})};if(S.token)h.Authorization=`Bearer ${S.token}`;if(opts.body&&!h['Content-Type'])h['Content-Type']='application/json';const r=await fetch(`${API}${path}`,{...opts,headers:h});if(r.status===401){logout();throw new Error('نشست منقضی شد')}return r}
+function summary(nb){const x=nb.execution||{};return{status:nb.status||'draft',progress:x.progress??nb.progress??0,stage:x.current_stage||nb.current_stage||'idle',cancel_requested:Boolean(x.cancel_requested??nb.cancel_requested),can_cancel:Boolean(x.can_cancel??nb.can_cancel??nb.status==='running')}}
+function renderList(){const list=el('list');if(!S.notebooks.length){list.innerHTML='<div class="empty">هنوز نت‌بوکی ایجاد نشده است.</div>';return}list.innerHTML=S.notebooks.map(nb=>{const s=summary(nb);return `<div class="nb ${S.current?.id===nb.id?'active':''}" onclick="openNb('${nb.id}')"><h4>${esc(nb.title||'Untitled notebook')}</h4><div class="meta">${badge(s.status)}<span>${esc(nb.topic||nb.config?.topic||'')}</span></div><div class="prog"><div style="width:${Math.max(0,Math.min(100,s.progress))}%"></div></div><div class="meta" style="margin-top:8px"><span>مرحله: ${esc(s.stage)}</span><span>${s.progress}%</span>${s.cancel_requested?'<span class="badge cancelled">در انتظار توقف</span>':''}</div></div>`}).join('')}
+async function login(){try{const r=await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:el('u').value.trim(),password:el('p').value})});const d=await r.json();if(!r.ok){el('loginErr').textContent=d.error||'ورود ناموفق';return}S.token=d.token;localStorage.setItem('engine_token',S.token);el('me').textContent=d.user;await enter()}catch(e){el('loginErr').textContent=e.message}} function logout(){stopPoll();S.token=null;S.current=null;localStorage.removeItem('engine_token');el('shell').classList.remove('active');el('login').classList.remove('hidden')} async function enter(){el('login').classList.add('hidden');el('shell').classList.add('active');await loadNotebooks();showHome()} async function loadNotebooks(){const r=await api('/notebooks');const d=await r.json();S.notebooks=d.notebooks||[];renderList()}
+function homeStats(){const n=S.notebooks;const running=n.filter(x=>x.status==='running').length,complete=n.filter(x=>x.status==='complete').length,failed=n.filter(x=>x.status==='failed').length,ready=n.filter(x=>x.results_ready).length;return `<div class="grid"><div class="stat"><h3>کل نت‌بوک‌ها</h3><div class="v">${n.length}</div><div class="small">تمام notebookهای ثبت‌شده</div></div><div class="stat"><h3>در حال اجرا</h3><div class="v" style="color:var(--warn)">${running}</div><div class="small">jobهای فعال با poll زنده</div></div><div class="stat"><h3>تکمیل‌شده</h3><div class="v" style="color:var(--ok)">${complete}</div><div class="small">runهای موفق</div></div><div class="stat"><h3>نیازمند بررسی</h3><div class="v" style="color:var(--err)">${failed}</div><div class="small">runهای fail شده</div></div><div class="stat"><h3>نتیجه آماده</h3><div class="v">${ready}</div><div class="small">HTML / Markdown / JSON آماده</div></div></div>`}
+function payload(){const topic=el('topic')?.value?.trim()||'',llm_model=el('model')?.value?.trim()||'',analysis_mode=el('mode')?.value?.trim()||'',analysis_depth=el('depth')?.value?.trim()||'',source_limit=el('sourceLimit')?.value?.trim()||'',operator_notes=el('notes')?.value?.trim()||'';const p={topic};if(llm_model)p.llm_model=llm_model;if(analysis_mode)p.analysis_mode=analysis_mode;if(analysis_depth)p.analysis_depth=analysis_depth;if(source_limit)p.source_limit=source_limit;if(operator_notes)p.operator_notes=operator_notes;return p}
+function showHome(focus=false){stopPoll();S.current=null;renderList();el('content').innerHTML=`${homeStats()}<div class="panel" style="margin-top:18px"><h2 style="margin-top:0">ایجاد و اجرای نت‌بوک عملیاتی</h2><p class="small">موضوع، مدل، حالت تحلیل و سقف منابع را تعیین کن؛ سپس notebook را بساز، اجرا کن، مرحله‌ها را live ببین، در صورت نیاز stop بده، diagnostics بگیر و خروجی را export کن.</p><div class="kv"><div class="field" style="grid-column:1/-1"><label>موضوع تحلیل</label><textarea id="topic" placeholder="مثال: اثر بسته شدن تنگه هرمز بر بازار انرژی و کشتیرانی"></textarea></div><div class="field"><label>مدل اجرا</label><input id="model" list="modelOptions" placeholder="مثال: gpt-4o"></div><div class="field"><label>حالت تحلیل</label><input id="mode" list="modeOptions" placeholder="مثال: strategic-brief"></div><div class="field"><label>عمق تحلیل</label><input id="depth" list="depthOptions" placeholder="مثال: standard"></div><div class="field"><label>سقف منابع OSINT</label><input id="sourceLimit" type="number" min="3" max="20" value="9"></div><div class="field" style="grid-column:1/-1"><label>یادداشت اپراتور</label><textarea id="notes" placeholder="مثال: روی ریسک بازار، نفت، بیمه و سناریوهای شوک تمرکز شود."></textarea></div></div><div class="actions" style="margin-top:14px"><button class="btn primary" onclick="quickNb()">ایجاد و آماده‌سازی</button><button class="btn" onclick="suggestNb()">پیشنهاد پیکربندی</button></div><div id="wiz" class="small" style="margin-top:14px">خروجی wizard و summary اولیه در اینجا نمایش داده می‌شود.</div></div>`;if(focus)el('topic')?.focus()}
+async function suggestNb(){const p=payload();if(!p.topic){alert('ابتدا موضوع را وارد کن');return}el('wiz').innerHTML='<span class="spin"></span> در حال ساخت پیشنهاد...';const r=await api('/wizard/suggest',{method:'POST',body:JSON.stringify({topic:p.topic})}),d=await r.json();if(!r.ok){el('wiz').innerHTML=`<span style="color:#ffb4b4">${esc(d.error||'خطا')}</span>`;return}S.suggestion=d.suggestion;el('wiz').innerHTML=`<div class="box"><h3>پیشنهاد سریع QEngin</h3><div class="kv"><div class="box"><h3>عنوان</h3><div>${esc(d.suggestion.title||'')}</div></div><div class="box"><h3>بازه زمانی</h3><div>${esc(d.suggestion.timeframe||'-')}</div></div><div class="box"><h3>زبان‌ها</h3><div>${arr(d.suggestion.languages).map(x=>`<span class="tag">${esc(x)}</span>`).join('')||'-'}</div></div><div class="box"><h3>موتورها</h3><div>${arr(d.suggestion.engines).map(x=>`<span class="tag">${esc(x)}</span>`).join('')||'-'}</div></div></div><div class="small" style="margin-top:10px">source=${esc(d.source||'-')} | cached=${d.cached?'yes':'no'} | latency=${esc(d.latency_ms||0)}ms</div><div class="actions" style="margin-top:12px"><button class="btn primary" onclick="createFromSuggestion()">ایجاد نت‌بوک از این پیشنهاد</button></div></div>`}
+async function quickNb(){const p=payload();if(!p.topic){alert('ابتدا موضوع را وارد کن');return}el('wiz').innerHTML='<span class="spin"></span> در حال ایجاد notebook...';const r=await api('/wizard/quick-notebook',{method:'POST',body:JSON.stringify(p)}),d=await r.json();if(!r.ok){el('wiz').innerHTML=`<span style="color:#ffb4b4">${esc(d.error||'خطا')}</span>`;return}await loadNotebooks();el('wiz').innerHTML=`نت‌بوک <strong>${esc(d.notebook.title)}</strong> ایجاد شد.`;await openNb(d.notebook.id)}
+async function createFromSuggestion(){if(!S.suggestion)return;const p=payload(),config={...S.suggestion};if(p.llm_model)config.llm_model=p.llm_model;if(p.analysis_mode)config.analysis_mode=p.analysis_mode;if(p.analysis_depth)config.analysis_depth=p.analysis_depth;if(p.source_limit)config.source_limit=Number(p.source_limit);if(p.operator_notes)config.operator_notes=p.operator_notes;const r=await api('/notebooks',{method:'POST',body:JSON.stringify({title:config.title||'New Notebook',config,llm_model:p.llm_model,analysis_mode:p.analysis_mode,analysis_depth:p.analysis_depth,source_limit:p.source_limit,operator_notes:p.operator_notes})}),d=await r.json();if(!r.ok){alert(d.error||'خطا');return}await loadNotebooks();await openNb(d.id)}
+async function bundle(id){const [a,b,c,d]=await Promise.all([api(`/notebooks/${id}`),api(`/notebooks/${id}/status`),api(`/notebooks/${id}/results`).catch(()=>null),api(`/notebooks/${id}/diagnostics`).catch(()=>null)]);const nb=await a.json(),st=await b.json(),res=c?await c.json():null,diag=d?await d.json():null;nb.execution=nb.execution||{};Object.assign(nb.execution,{progress:st.progress??nb.execution.progress??0,current_stage:st.current_stage??nb.execution.current_stage??null,started_at:st.started_at??nb.execution.started_at??null,completed_at:st.completed_at??nb.execution.completed_at??null,error:st.error??nb.execution.error??null,cancel_requested:st.cancel_requested??nb.execution.cancel_requested??false,can_cancel:st.can_cancel??(st.status==='running'),run_id:st.run_id??nb.execution.run_id??null,logs_count:st.logs_count??nb.execution.logs_count??0,source_count:st.source_count??nb.execution.source_count??0,llm_model:st.llm_model??nb.execution.llm_model??null,analysis_mode:st.analysis_mode??nb.execution.analysis_mode??null});nb.status=st.status||nb.status;nb.exports=st.exports||nb.exports||{};nb.results=res?.result||nb.results||{};nb.results_ready=Boolean(res?.results_ready||st.results_ready||Object.keys(nb.results||{}).length);nb.diagnostics=diag||nb.diagnostics||null;return nb}
+async function openNb(id){stopPoll();S.logCursor=0;S.current=await bundle(id);S.tab=S.current.results_ready?'results':'overview';await loadLogs(true);renderList();renderNb();if(S.current.status==='running')startPoll()} async function refreshNb(full=true){if(!S.current?.id)return;if(full){S.current=await bundle(S.current.id)}else{const r=await api(`/notebooks/${S.current.id}/status`),st=await r.json();S.current.execution=S.current.execution||{};S.current.status=st.status||S.current.status;Object.assign(S.current.execution,{progress:st.progress??S.current.execution.progress??0,current_stage:st.current_stage??S.current.execution.current_stage??null,started_at:st.started_at??S.current.execution.started_at??null,completed_at:st.completed_at??S.current.execution.completed_at??null,error:st.error??S.current.execution.error??null,cancel_requested:st.cancel_requested??S.current.execution.cancel_requested??false,can_cancel:st.can_cancel??(st.status==='running'),run_id:st.run_id??S.current.execution.run_id??null,logs_count:st.logs_count??S.current.execution.logs_count??0,source_count:st.source_count??S.current.execution.source_count??0,llm_model:st.llm_model??S.current.execution.llm_model??null,analysis_mode:st.analysis_mode??S.current.execution.analysis_mode??null});S.current.exports=st.exports||S.current.exports||{}}await loadLogs(full);await loadNotebooks();renderList();renderNb()}
+async function loadLogs(reset=false){if(!S.current?.id)return;if(reset){S.current.execution=S.current.execution||{};S.current.execution.logs=[];S.logCursor=0}const r=await api(`/notebooks/${S.current.id}/logs?from=${S.logCursor}`),d=await r.json();S.current.execution=S.current.execution||{};S.current.execution.logs=arr(S.current.execution.logs).concat(d.logs||[]);S.current.execution.progress=d.progress??S.current.execution.progress??0;S.current.execution.current_stage=d.current_stage??S.current.execution.current_stage??null;S.logCursor=d.next_index??S.logCursor}
+function header(nb){const ex=nb.execution||{},runLabel=nb.status==='running'?'در حال اجرا':(nb.results_ready?'اجرای مجدد':'Run Notebook');return `<div class="box"><div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start"><div><h2 style="margin:0 0 8px">${esc(nb.title||'Untitled notebook')}</h2><div class="small">${esc(nb.config?.topic||'')}</div><div class="actions" style="margin-top:10px">${badge(nb.status)}${ex.cancel_requested?'<span class="badge cancelled">در انتظار توقف</span>':''}<span class="badge configured">مرحله: ${esc(ex.current_stage||'idle')}</span><span class="badge draft">پیشرفت: ${esc(ex.progress??0)}%</span></div></div><div class="actions"><button class="btn primary" ${nb.status==='running'?'disabled':''} onclick="runNb()">${runLabel}</button><button class="btn warn" ${ex.can_cancel?'':'disabled'} onclick="cancelNb()">توقف</button><button class="btn" onclick="refreshNb(true)">بازخوانی</button><button class="btn err" onclick="delNb('${nb.id}')">حذف</button></div></div><div class="grid" style="margin-top:16px"><div class="stat"><h3>مدل</h3><div class="v" style="font-size:1.1rem">${esc(ex.llm_model||nb.config?.llm_model||'-')}</div><div class="small">مدل فعال در run</div></div><div class="stat"><h3>حالت تحلیل</h3><div class="v" style="font-size:1.1rem">${esc(ex.analysis_mode||nb.config?.analysis_mode||'strategic-brief')}</div><div class="small">حالت synthesis</div></div><div class="stat"><h3>منابع</h3><div class="v">${esc(ex.source_count??0)}</div><div class="small">sourceهای جمع‌شده</div></div><div class="stat"><h3>Run ID</h3><div class="v" style="font-size:1rem">${esc(ex.run_id||'-')}</div><div class="small">برای trace و دیباگ</div></div></div><div class="small" style="margin-top:12px">شروع: ${esc(fmt(ex.started_at))} | پایان: ${esc(fmt(ex.completed_at))} | لاگ‌ها: ${esc(ex.logs_count??arr(ex.logs).length)} | ${ex.error?`<span style="color:#ffb4b4">خطا: ${esc(ex.error)}</span>`:'بدون خطای ثبت‌شده'}</div></div>`}
+function tOverview(nb){const c=nb.config||{},ex=nb.execution||{};return `<div class="kv"><div class="box"><h3>موضوع</h3><div>${esc(c.topic||'-')}</div></div><div class="box"><h3>بازه زمانی</h3><div>${esc(c.timeframe||'-')}</div></div><div class="box"><h3>زبان‌ها</h3><div>${arr(c.languages).map(x=>`<span class="tag">${esc(x)}</span>`).join('')||'-'}</div></div><div class="box"><h3>موتورها</h3><div>${arr(c.engines).map(x=>`<span class="tag">${esc(x)}</span>`).join('')||'-'}</div></div><div class="box"><h3>بازیگران</h3><div>${arr(c.actors).map(x=>`<span class="tag">${esc(x)}</span>`).join('')||'-'}</div></div><div class="box"><h3>Limit منابع</h3><div>${esc(c.source_limit||'-')}</div></div><div class="box"><h3>تحلیل‌گر</h3><div>${esc(c.llm_model||'-')}</div></div><div class="box"><h3>عمق تحلیل</h3><div>${esc(c.analysis_depth||'standard')}</div></div></div><div class="split" style="margin-top:14px"><div class="box"><h3>فرضیه‌ها</h3>${arr(c.hypotheses).length?`<ul>${arr(c.hypotheses).map(h=>`<li>${esc(h.statement||'')} <span class="tag">${esc(h.category||'general')}</span> <span class="tag">وزن ${esc(h.weight??'')}</span></li>`).join('')}</ul>`:'<div class="empty" style="min-height:110px">فرضیه‌ای ثبت نشده است.</div>'}</div><div class="box"><h3>جستجوهای OSINT</h3>${arr(c.osint_queries).length?`<div>${arr(c.osint_queries).map(q=>`<span class="tag">${esc(q)}</span>`).join('')}</div>`:'<div class="empty" style="min-height:110px">query ثبت نشده است.</div>'}<div class="small" style="margin-top:12px">ایجاد: ${esc(fmt(nb.created))}<br>آخرین تغییر: ${esc(fmt(nb.updated))}<br>وضعیت: ${esc(labels[nb.status]||nb.status)}</div></div></div><div class="box" style="margin-top:14px"><h3>Execution Snapshot</h3><div class="json">${esc(j({status:nb.status,progress:ex.progress??0,current_stage:ex.current_stage,cancel_requested:ex.cancel_requested??false,started_at:ex.started_at,completed_at:ex.completed_at,run_id:ex.run_id}))}</div></div>`}
+function tLogs(nb){const logs=arr(nb.execution?.logs);if(!logs.length)return '<div class="empty">هنوز لاگی ثبت نشده است. بعد از Run Notebook لاگ مرحله‌به‌مرحله اینجا ظاهر می‌شود.</div>';return logs.map(l=>`<div class="item"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><strong>${esc(l.stage||'stage')}</strong><small>${esc(fmt(l.timestamp))}</small></div><div style="margin-top:8px">${esc(l.message||'')}</div><div class="small" style="margin-top:6px">level: ${esc(l.level||'info')} ${l.progress!=null?`| progress: ${esc(l.progress)}%`:''}</div>${l.details&&Object.keys(l.details).length?`<div class="json" style="margin-top:10px;max-height:none">${esc(j(l.details))}</div>`:''}</div>`).join('')}
+function tResults(nb){const r=nb.results||{};if(!nb.results_ready||!Object.keys(r).length)return '<div class="empty">هنوز خروجی آماده نیست. notebook را اجرا کن یا منتظر اتمام run بمان.</div>';return `<div class="box"><h3>Executive Summary</h3><p class="small" style="font-size:.96rem;line-height:2">${esc(r.executive_summary||'')}</p><div class="actions"><span class="badge configured">mode: ${esc(r.generated_with||'unknown')}</span><span class="badge draft">sources: ${esc(r.source_count??0)}</span>${arr(r.languages).map(x=>`<span class="badge configured">${esc(x)}</span>`).join('')}</div></div><div class="split" style="margin-top:14px"><div class="box"><h3>Key Findings</h3><ul>${arr(r.key_findings).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="box"><h3>Recommended Actions</h3><ul>${arr(r.recommended_actions).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>`}
+function tDiag(nb){const d=nb.diagnostics;if(!d)return '<div class="empty">diagnostics هنوز بارگذاری نشده است. بازخوانی را بزن.</div>';const ex=d.execution||{},pipe=arr(d.pipeline),timings=ex.stage_timings||{};return `<div class="grid"><div class="stat"><h3>وضعیت</h3><div class="v" style="font-size:1.2rem">${esc(d.notebook?.status||'-')}</div><div class="small">state فعلی job</div></div><div class="stat"><h3>پیشرفت</h3><div class="v">${esc(ex.progress??0)}%</div><div class="small">completion فعلی</div></div><div class="stat"><h3>لاگ‌ها</h3><div class="v">${esc(arr(ex.logs).length)}</div><div class="small">تعداد eventهای ثبت‌شده</div></div><div class="stat"><h3>منابع</h3><div class="v">${esc(d.source_summary?.count??0)}</div><div class="small">sourceهای pipeline</div></div></div><div class="split" style="margin-top:14px"><div class="box"><h3>Pipeline / Tools</h3><div class="timeline">${pipe.map(p=>`<div class="item"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="name">${esc(p.name||'')}</div>${badge(p.status||'draft')}</div><div class="sub">${esc(p.role||'')}</div></div>`).join('')}</div></div><div class="box"><h3>Stage Timings</h3>${Object.keys(timings).length?`<div class="timeline">${Object.entries(timings).map(([n,v])=>`<div class="item"><div class="name">${esc(n)}</div><div class="sub">شروع: ${esc(fmt(v.started_at))}<br>پایان: ${esc(fmt(v.completed_at))}</div></div>`).join('')}</div>`:'<div class="empty" style="min-height:110px">stage timing ثبت نشده است.</div>'}</div></div>`}
+function tExports(nb){const x=nb.exports||{};if(!nb.results_ready||!Object.keys(x).length)return '<div class="empty">فایل‌های خروجی بعد از تکمیل run آماده می‌شوند.</div>';return `<div class="box"><h3>Export Artifacts</h3><div class="actions"><a class="btn primary" href="${esc(x.html||'#')}" target="_blank">HTML</a><a class="btn" href="${esc(x.markdown||'#')}" target="_blank">Markdown</a><a class="btn" href="${esc(x.json||'#')}" target="_blank">JSON</a></div><div class="json" style="margin-top:14px">${esc(j(x))}</div></div>`}
+function renderNb(){if(!S.current)return;const views={overview:tOverview(S.current),logs:tLogs(S.current),results:tResults(S.current),diagnostics:tDiag(S.current),exports:tExports(S.current)};el('content').innerHTML=`${header(S.current)}<div class="tabs"><button class="tab ${S.tab==='overview'?'active':''}" onclick="setTab('overview')">Overview</button><button class="tab ${S.tab==='logs'?'active':''}" onclick="setTab('logs')">Logs</button><button class="tab ${S.tab==='results'?'active':''}" onclick="setTab('results')">Results</button><button class="tab ${S.tab==='diagnostics'?'active':''}" onclick="setTab('diagnostics')">Diagnostics</button><button class="tab ${S.tab==='exports'?'active':''}" onclick="setTab('exports')">Exports</button></div><div class="panel">${views[S.tab]||''}</div>`} function setTab(t){S.tab=t;renderNb()}
+async function runNb(){if(!S.current?.id||S.current.status==='running')return;const r=await api(`/notebooks/${S.current.id}/run`,{method:'POST'}),d=await r.json();if(!r.ok){alert(d.error||'خطا در اجرا');return}S.current.status=d.status||'running';S.current.execution=S.current.execution||{};Object.assign(S.current.execution,{progress:d.progress??0,current_stage:d.current_stage||'queued',error:null,cancel_requested:false});S.current.results_ready=false;S.current.results={};S.current.exports={};S.current.diagnostics=null;S.tab='logs';await loadLogs(true);await loadNotebooks();renderList();renderNb();startPoll()} async function cancelNb(){if(!S.current?.id)return;if(!confirm('درخواست توقف به job ارسال شود؟'))return;const r=await api(`/notebooks/${S.current.id}/cancel`,{method:'POST'}),d=await r.json();if(!r.ok){alert(d.error||'خطا در توقف');return}S.current.execution=S.current.execution||{};S.current.execution.cancel_requested=d.cancel_requested??true;await loadNotebooks();renderList();renderNb()} function startPoll(){stopPoll();if(!S.current?.id)return;S.poll=setInterval(async()=>{try{await refreshNb(false);if(['complete','failed','cancelled'].includes(S.current.status)){stopPoll();S.current=await bundle(S.current.id);await loadLogs(false);if(S.current.results_ready)S.tab='results';else if(S.current.status==='failed')S.tab='diagnostics';await loadNotebooks();renderList();renderNb()}}catch(e){console.error(e);stopPoll()}},2500)} async function delNb(id){if(!confirm('این notebook حذف شود؟'))return;await api(`/notebooks/${id}`,{method:'DELETE'});if(S.current?.id===id){S.current=null;stopPoll()}await loadNotebooks();showHome()}
+async function showStatus(){stopPoll();S.current=null;renderList();el('content').innerHTML='<div class="panel"><span class="spin"></span> در حال بررسی وضعیت سیستم...</div>';const r=await api('/system/status'),d=await r.json(),items=[['Graphiti + Neo4j',d.graphiti],['LLM',d.llm],['OSINT',d.osint],['Ensemble',d.ensemble],['AnalystCrew',d.analyst_crew],['Notebook Store',{status:'ok',count:d.notebooks?.count||0}]];el('content').innerHTML=`<div class="panel"><h2 style="margin-top:0">وضعیت سیستم</h2><div class="grid">${items.map(([n,v])=>`<div class="box"><h3>${esc(n)}</h3><div class="v" style="font-size:1.3rem;color:${v?.status==='ok'?'var(--ok)':'var(--err)'}">${esc(v?.status||'unknown')}</div><div class="json" style="margin-top:10px;max-height:260px">${esc(j(v||{}))}</div></div>`).join('')}</div><div class="small" style="margin-top:14px">آخرین بررسی: ${esc(fmt(d.timestamp))}</div></div>`}
+(async()=>{if(S.token){try{const r=await api('/auth/me');if(r.ok){const d=await r.json();el('me').textContent=d.user;await enter();return}}catch(e){console.warn(e)}}el('login').classList.remove('hidden')})();
 </script>
 </body>
 </html>

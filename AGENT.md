@@ -1,6 +1,6 @@
 # MiroFish - Architecture & Deployment Reference (AGENT.md)
 
-> Last updated: 2026-04-03 (final audit & deployment)
+> Last updated: 2026-04-06 (QEngin runtime controls, diagnostics, export, cancel flow)
 > For AI agents and developers working on this codebase.
 
 ## What is MiroFish?
@@ -12,6 +12,23 @@ A **Multi-Agent Swarm Intelligence Engine** for geopolitical and economic predic
 4. Simulates social media interactions (Twitter/Reddit) between agents
 5. Generates predictive reports using ReACT-based reasoning
 6. Enables interactive Q&A with the simulation results
+
+## QEngin operator surface
+
+This repo also publishes the QEngin dashboard on:
+
+- `https://miro.gantor.ir/engine/`
+- `https://engin.gantor.ir/engine/`
+
+QEngin is the notebook-centric operator surface for:
+
+- notebook authoring
+- run / rerun
+- live progress polling
+- stage-by-stage logs
+- diagnostics and stage timings
+- HTML / Markdown / JSON exports
+- operator stop / cancel
 
 ## Architecture Overview
 
@@ -162,6 +179,25 @@ docker compose -f compose.qadr.yaml up -d
 DOCKER_BUILDKIT=0 docker build -f Dockerfile.backend -t gantor/mirofish-backend:latest .
 ```
 
+### Runtime validation
+
+Preferred smoke path from inside the Docker network:
+
+```bash
+docker run --rm --network fgpt_ingress \
+  -v /home/saman/workspaces/gantor-mirofish/backend/scripts:/scripts \
+  python:3.11-slim \
+  python /scripts/smoke_test_qengin_notebook.py \
+    --base-url http://qadr-mirofish-backend:5001/engine \
+    --username admin \
+    --password 'QADREngine@2026!' \
+    --topic 'Hormuz operational smoke test' \
+    --exercise-cancel
+```
+
+This is the authoritative runtime check when public DNS or external egress to the shared ingress is
+temporarily unreliable.
+
 ### compose.qadr.yaml networks:
 - `fgpt_ingress` - Frontend + backend, connected to Caddy
 - `fgpt_ai` - Backend only, connected to LiteLLM gateway
@@ -187,6 +223,18 @@ DOCKER_BUILDKIT=0 docker build -f Dockerfile.backend -t gantor/mirofish-backend:
 3. **Simulation Setup** - Generate agent profiles from graph entities
 4. **Simulation Run** - OASIS multi-agent social media simulation
 5. **Report & Interaction** - ReACT-based analysis with tool-augmented retrieval
+
+## Notebook runtime API
+
+Primary operator endpoints:
+
+- `POST /engine/notebooks/<id>/run`
+- `POST /engine/notebooks/<id>/cancel`
+- `GET /engine/notebooks/<id>/status`
+- `GET /engine/notebooks/<id>/logs`
+- `GET /engine/notebooks/<id>/results`
+- `GET /engine/notebooks/<id>/diagnostics`
+- `GET /engine/notebooks/<id>/export?format=html|markdown|json`
 
 ## Important: LLM Client Compatibility
 

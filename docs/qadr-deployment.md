@@ -1,6 +1,10 @@
-# Gantor MiroFish on QADR
+# Gantor MiroFish / QEngin on QADR
 
-This fork is adapted for deployment on `miro.gantor.ir` behind the QADR Caddy ingress.
+This fork is adapted for deployment on:
+
+- `https://miro.gantor.ir/` for the public MiroFish surface behind QADR basic auth
+- `https://miro.gantor.ir/engine/` for the embedded QEngin dashboard
+- `https://engin.gantor.ir/engine/` for the direct QEngin operator surface
 
 ## What changed
 
@@ -10,6 +14,13 @@ This fork is adapted for deployment on `miro.gantor.ir` behind the QADR Caddy in
 - `compose.qadr.yaml` for Docker Compose deployment on QADR
 - degraded-mode backend startup when `ZEP_API_KEY` is unavailable
 - `/api/health` and `/health` backend health endpoints
+- QEngin notebook runtime with:
+  - run / rerun
+  - live status polling
+  - stage-by-stage logs
+  - diagnostics view
+  - HTML / Markdown / JSON exports
+  - operator stop / cancel support
 
 ## Environment
 
@@ -42,3 +53,36 @@ Backend container:
 - `qadr-mirofish-backend`
 
 The frontend is expected to be routed publicly via Caddy on `miro.gantor.ir`.
+
+## QEngin operational smoke tests
+
+Internal smoke from the Docker network:
+
+```bash
+docker run --rm --network fgpt_ingress \
+  -v /home/saman/workspaces/gantor-mirofish/backend/scripts:/scripts \
+  python:3.11-slim \
+  python /scripts/smoke_test_qengin_notebook.py \
+    --base-url http://qadr-mirofish-backend:5001/engine \
+    --username admin \
+    --password 'QADREngine@2026!' \
+    --topic 'Hormuz operational smoke test' \
+    --exercise-cancel
+```
+
+What this verifies:
+
+- admin login
+- quick notebook creation
+- notebook run lifecycle
+- log polling
+- diagnostics payload
+- result exports
+- operator cancel / stop path
+
+## Notes on public validation
+
+`engin.gantor.ir` is served through the shared QADR Caddy ingress. In some operator environments,
+direct egress to `5.235.208.128:443` or DNS resolution for `engin.gantor.ir` may be unreliable.
+When that happens, use the internal Docker-network smoke test above to validate the runtime and
+then separately confirm the public route from a browser that can reach the QADR ingress.

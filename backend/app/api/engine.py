@@ -10,10 +10,20 @@ import time
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
-from flask import request, jsonify, send_from_directory
+from flask import Response, request, jsonify, send_from_directory
 from . import engine_bp
 from ..config import Config
 from ..utils.logger import get_logger
+from ..services.notebook_runner import (
+    build_diagnostics_payload,
+    build_status_payload,
+    export_payload,
+    get_notebook_logs,
+    load_notebook,
+    notebook_path,
+    request_notebook_cancel,
+    start_notebook_run,
+)
 
 logger = get_logger('mirofish.engine')
 
@@ -113,6 +123,13 @@ def _nb_path(nb_id):
     return os.path.join(NOTEBOOKS_DIR, f"{nb_id}.json")
 
 
+def _load_notebook_or_404(nb_id):
+    path = notebook_path(NOTEBOOKS_DIR, nb_id)
+    if not os.path.exists(path):
+        return None, (jsonify({"error": "Not found"}), 404)
+    return load_notebook(NOTEBOOKS_DIR, nb_id), None
+
+
 def _list_notebooks():
     nbs = []
     if os.path.isdir(NOTEBOOKS_DIR):
@@ -121,6 +138,7 @@ def _list_notebooks():
                 try:
                     with open(os.path.join(NOTEBOOKS_DIR, f)) as fh:
                         nb = json.load(fh)
+                        status_payload = build_status_payload(nb)
                         nbs.append({
                             "id": nb["id"],
                             "title": nb.get("title", "Untitled"),
@@ -128,6 +146,10 @@ def _list_notebooks():
                             "created": nb.get("created"),
                             "updated": nb.get("updated"),
                             "topic": nb.get("config", {}).get("topic", ""),
+                            "progress": status_payload.get("progress", 0),
+                            "current_stage": status_payload.get("current_stage"),
+                            "results_ready": status_payload.get("results_ready", False),
+                            "logs_count": status_payload.get("logs_count", 0),
                         })
                 except Exception:
                     pass
@@ -246,6 +268,29 @@ def _normalize_wizard_suggestion(topic, suggestion):
     return normalized
 
 
+def _apply_notebook_overrides(base_config, overrides):
+    config = dict(base_config or {})
+    data = overrides or {}
+
+    for key in ("topic", "timeframe", "analysis_mode", "analysis_depth", "llm_model", "operator_notes"):
+        value = data.get(key)
+        if value not in (None, ""):
+            config[key] = value
+
+    source_limit = data.get("source_limit")
+    if source_limit not in (None, ""):
+        try:
+            config["source_limit"] = max(3, min(20, int(source_limit)))
+        except (TypeError, ValueError):
+            pass
+
+    export_formats = data.get("export_formats")
+    if isinstance(export_formats, list) and export_formats:
+        config["export_formats"] = [str(item).strip().lower() for item in export_formats if str(item).strip()]
+
+    return config
+
+
 def _wizard_prompt_messages(topic):
     compact_schema = {
         "title": "short notebook title",
@@ -323,7 +368,7 @@ def create_notebook():
         "created": now,
         "updated": now,
         "owner": request.user["user"],
-        "config": data.get("config", {}),
+        "config": _apply_notebook_overrides(data.get("config", {}), data),
         "steps": [],
         "results": {},
     }
@@ -335,11 +380,10 @@ def create_notebook():
 @engine_bp.route('/notebooks/<nb_id>', methods=['GET'])
 @require_auth
 def get_notebook(nb_id):
-    path = _nb_path(nb_id)
-    if not os.path.exists(path):
-        return jsonify({"error": "Not found"}), 404
-    with open(path) as f:
-        return jsonify(json.load(f))
+    notebook, error = _load_notebook_or_404(nb_id)
+    if error:
+        return error
+    return jsonify(notebook)
 
 
 @engine_bp.route('/notebooks/<nb_id>', methods=['PUT'])
@@ -367,6 +411,127 @@ def delete_notebook(nb_id):
     if os.path.exists(path):
         os.remove(path)
     return jsonify({"deleted": nb_id})
+
+
+@engine_bp.route('/notebooks/<nb_id>/run', methods=['POST'])
+@require_auth
+def run_notebook(nb_id):
+    notebook, error = _load_notebook_or_404(nb_id)
+    if error:
+        return error
+
+    notebook, started = start_notebook_run(NOTEBOOKS_DIR, nb_id)
+    payload = build_status_payload(notebook)
+    payload["started"] = started
+    payload["message"] = (
+        "Notebook execution started."
+        if started
+        else "Notebook execution is already in progress."
+    )
+    return jsonify(payload), 202 if started else 200
+
+
+@engine_bp.route('/notebooks/<nb_id>/cancel', methods=['POST'])
+@require_auth
+def cancel_notebook(nb_id):
+    notebook, error = _load_notebook_or_404(nb_id)
+    if error:
+        return error
+
+    notebook, cancelled = request_notebook_cancel(NOTEBOOKS_DIR, nb_id)
+    payload = build_status_payload(notebook)
+    payload["cancel_requested"] = notebook.get("execution", {}).get("cancel_requested", False)
+    payload["cancelled"] = cancelled
+    payload["message"] = (
+        "Notebook cancellation requested."
+        if cancelled
+        else "Notebook is not running or cancellation was already requested."
+    )
+    return jsonify(payload), 202 if cancelled else 200
+
+
+@engine_bp.route('/notebooks/<nb_id>/status', methods=['GET'])
+@require_auth
+def notebook_status(nb_id):
+    notebook, error = _load_notebook_or_404(nb_id)
+    if error:
+        return error
+    return jsonify(build_status_payload(notebook))
+
+
+@engine_bp.route('/notebooks/<nb_id>/logs', methods=['GET'])
+@require_auth
+def notebook_logs(nb_id):
+    notebook, error = _load_notebook_or_404(nb_id)
+    if error:
+        return error
+    try:
+        from_index = int(request.args.get("from", "0"))
+    except ValueError:
+        from_index = 0
+    from_index = max(from_index, 0)
+    payload = get_notebook_logs(notebook, from_index=from_index)
+    payload["status"] = notebook.get("status", "draft")
+    payload["current_stage"] = notebook.get("execution", {}).get("current_stage")
+    payload["progress"] = notebook.get("execution", {}).get("progress", 0)
+    return jsonify(payload)
+
+
+@engine_bp.route('/notebooks/<nb_id>/results', methods=['GET'])
+@require_auth
+def notebook_results(nb_id):
+    notebook, error = _load_notebook_or_404(nb_id)
+    if error:
+        return error
+    if not notebook.get("results"):
+        return jsonify({
+            "status": notebook.get("status", "draft"),
+            "results_ready": False,
+            "message": "Results are not ready yet.",
+            "execution": notebook.get("execution", {}),
+        }), 202
+    return jsonify({
+        "status": notebook.get("status", "draft"),
+        "results_ready": True,
+        "result": notebook.get("results", {}),
+        "exports": notebook.get("exports", {}),
+        "execution": notebook.get("execution", {}),
+    })
+
+
+@engine_bp.route('/notebooks/<nb_id>/diagnostics', methods=['GET'])
+@require_auth
+def notebook_diagnostics(nb_id):
+    notebook, error = _load_notebook_or_404(nb_id)
+    if error:
+        return error
+    return jsonify(build_diagnostics_payload(notebook))
+
+
+@engine_bp.route('/notebooks/<nb_id>/export', methods=['GET'])
+@require_auth
+def notebook_export(nb_id):
+    notebook, error = _load_notebook_or_404(nb_id)
+    if error:
+        return error
+    fmt = (request.args.get("format") or "json").strip().lower()
+    try:
+        body, content_type = export_payload(notebook, fmt)
+    except FileNotFoundError:
+        return jsonify({"error": "Results are not ready yet."}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    ext = {"json": "json", "markdown": "md", "html": "html"}.get(fmt, fmt)
+    filename = f"{nb_id}-result.{ext}"
+    return Response(
+        body,
+        content_type=content_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 # ─── AI Wizard ─────────────────────────────────────────────────────────
@@ -417,7 +582,7 @@ def wizard_quick_notebook():
         "created": now,
         "updated": now,
         "owner": request.user["user"],
-        "config": suggestion,
+        "config": _apply_notebook_overrides(suggestion, data),
         "steps": [],
         "results": {},
     }
